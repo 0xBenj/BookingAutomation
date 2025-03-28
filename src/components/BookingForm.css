@@ -1,0 +1,512 @@
+.tutorly-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-radius: 16px;
+    overflow: hidden;
+    background-color: #ffffff;
+}
+  
+.tutorly-header {
+    background: linear-gradient(135deg, #3f4eb6, #7681d3);
+    color: white;
+    padding: 2.5rem 2rem;
+    text-align: center;
+}
+  
+.tutorly-header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+}
+  
+.tutorly-header p {
+    opacity: 0.9;
+    font-size: 1rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+  
+.tutorly-form {
+    background: white;
+    padding: 2.5rem;
+}
+  
+/* Form notice styling with icon */
+.form-notice {
+    background-color: #f9f9fb;
+    border-left: 4px solid #3f4eb6;
+    padding: 1.25rem;
+    margin-bottom: 2.5rem;
+    color: #4b5563;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    display: flex;
+    gap: 1rem;
+    border-radius: 0 8px 8px 0;
+}
+  
+.form-notice svg {
+    flex-shrink: 0;
+    color: #3f4eb6;
+    margin-top: 0.25rem;
+}
+  
+.form-notice p {
+    margin-bottom: 0.75rem;
+}
+  
+.form-notice p:last-child {
+    margin-bottom: 0;
+}
+  
+.whatsapp-link {
+    margin-top: 1rem;
+    text-align: center;
+}
+  
+.button-whatsapp {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #25D366;
+    color: white;
+    padding: 0.65rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-size: 0.95rem;
+    box-shadow: 0 2px 5px rgba(37, 211, 102, 0.3);
+}
+  
+.button-whatsapp:hover {
+    background-color: #128C7E;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(37, 211, 102, 0.4);
+}
+  
+/* Form section styling */
+.form-section-visible {
+    margin-bottom: 3rem;
+    padding: 2.25rem;
+    border-radius: 12px;
+    background-color: #ffffff;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e9eaf3;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-section-visible:hover {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+  
+.form-section-title {
+    display: flex;
+    align-items: center;
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #c1c6e7;
+}
+  
+.form-section-title svg {
+    color: #3f4eb6;
+    margin-right: 0.9rem;
+    flex-shrink: 0;
+}
+  
+.form-section-content {
+    padding: 0.5rem 0;
+}
+  
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+}
+  
+@media (min-width: 640px) {
+    .form-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+  
+.form-field {
+    margin-bottom: 1.75rem;
+    position: relative;
+}
+  
+.form-field-group {
+    margin-bottom: 1.75rem;
+}
+  
+.form-field label,
+.form-field-group label {
+    display: block;
+    margin-bottom: 0.6rem;
+    font-weight: 500;
+    color: #2d3748;
+    font-size: 0.95rem;
+}
+  
+.required {
+    color: #ef4444;
+    margin-left: 0.25rem;
+    font-weight: bold;
+}
+  
+.form-field select,
+.form-field input,
+.form-field textarea {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    background-color: white;
+    font-size: 1rem;
+    box-sizing: border-box;
+    transition: all 0.2s;
+    display: block;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+  
+.form-field select:focus,
+.form-field input:focus,
+.form-field textarea:focus {
+    outline: none;
+    border-color: #3f4eb6;
+    box-shadow: 0 0 0 3px rgba(63, 78, 182, 0.1);
+}
+  
+.form-field textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+  
+.checkbox-field {
+    display: flex;
+    align-items: center;
+}
+  
+.checkbox-field label {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+  
+.checkbox-field input[type="checkbox"] {
+    width: auto;
+    margin-right: 0.5rem;
+    cursor: pointer;
+    accent-color: #3f4eb6;
+}
+  
+/* Button-select styles */
+.button-select-group {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 -0.35rem 1.25rem;
+}
+  
+.button-select {
+    flex: 1 0 auto;
+    min-width: calc(33% - 0.75rem);
+    padding: 0.85rem 1rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    background-color: white;
+    font-size: 0.95rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #4b5563;
+    font-weight: 500;
+    margin: 0.35rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+  
+.button-select:hover {
+    background-color: #f7f8fd;
+    border-color: #c1c6e7;
+}
+  
+.button-select.selected {
+    background-color: #3f4eb6;
+    color: white;
+    border-color: #3f4eb6;
+    font-weight: 600;
+    box-shadow: 0 2px 5px rgba(63, 78, 182, 0.2);
+}
+  
+/* Submit button styling */
+.form-submit {
+    margin-top: 2.5rem;
+}
+  
+.button-primary {
+    width: 100%;
+    background-color: #3f4eb6;
+    color: white;
+    font-weight: 600;
+    font-size: 1.05rem;
+    padding: 1rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(63, 78, 182, 0.25);
+}
+  
+.button-primary:hover {
+    background-color: #364298;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(63, 78, 182, 0.35);
+}
+  
+.button-primary:disabled {
+    background-color: #c1c6e7;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+  
+.error-message {
+    background-color: #fee2e2;
+    color: #b91c1c;
+    padding: 0.9rem 1.2rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.error-message svg {
+    flex-shrink: 0;
+}
+  
+.field-hint {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-top: 0.4rem;
+}
+  
+.tutorly-footer {
+    text-align: center;
+    padding: 1.5rem;
+    color: #6b7280;
+    font-size: 0.85rem;
+    background-color: #f9fafc;
+    border-top: 1px solid #e9eaf3;
+}
+  
+/* Animation for form submission */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+  
+.loading-spinner {
+    animation: rotate 1s linear infinite;
+    margin-right: 0.5rem;
+}
+  
+@keyframes rotate {
+    100% { transform: rotate(360deg); }
+}
+  
+/* Success message styling */
+.success-message {
+    text-align: center;
+    padding: 3rem 2rem;
+}
+  
+.success-message svg {
+    color: #10b981;
+    margin: 0 auto 1.75rem;
+    display: block;
+    height: 80px;
+    width: 80px;
+}
+  
+.success-message h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1.25rem;
+    color: #2d3748;
+}
+  
+.success-message p {
+    color: #4b5563;
+    max-width: 500px;
+    margin: 0 auto 1.25rem;
+    font-size: 1.05rem;
+    line-height: 1.6;
+}
+  
+.contact-info {
+    font-size: 0.95rem;
+    margin-top: 2.5rem;
+    color: #6b7280;
+}
+  
+.contact-info a {
+    color: #3f4eb6;
+    text-decoration: none;
+    font-weight: 500;
+}
+  
+/* Adding error styles and fixing focus issues */
+.has-error input, 
+.has-error select, 
+.has-error textarea {
+    border-color: #ef4444;
+    background-color: #fff5f5;
+}
+  
+.error-text {
+    color: #ef4444;
+    font-size: 0.85rem;
+    margin-top: 0.35rem;
+    display: block;
+}
+  
+/* Price display styles */
+.price-display {
+    background-color: #f5f7fd;
+    border-radius: 12px;
+    padding: 1.75rem;
+    margin: 2.5rem 0 1rem 0;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.06);
+    border: 1.5px solid #c1c6e7;
+}
+  
+.price-display h3 {
+    margin-top: 0;
+    color: #3f4eb6;
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+  
+.price-details {
+    margin-top: 1rem;
+}
+  
+.price-details p {
+    margin: 0.8rem 0;
+    font-size: 1.05rem;
+}
+  
+.price-details p strong {
+    color: #2d3748;
+    font-weight: 600;
+}
+  
+.price-explanation {
+    font-size: 0.95rem;
+    color: #6b7280;
+    margin-top: 1rem;
+    font-style: italic;
+}
+
+/* Pricing summary section */
+.pricing-summary {
+    margin-top: 3rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, #f5f7fd, #ffffff);
+    border-radius: 12px;
+    border: 1.5px solid #c1c6e7;
+    box-shadow: 0 4px 12px rgba(63, 78, 182, 0.08);
+}
+
+.pricing-summary h3 {
+    font-size: 1.4rem;
+    color: #3f4eb6;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pricing-summary h3 svg {
+    color: #3f4eb6;
+}
+
+.pricing-summary-details {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (min-width: 640px) {
+    .pricing-summary-details {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.pricing-item {
+    padding: 1rem;
+    background-color: white;
+    border-radius: 8px;
+    border: 1px solid #e9eaf3;
+}
+
+.pricing-item-label {
+    color: #6b7280;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.pricing-item-value {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 1.1rem;
+}
+
+.pricing-total {
+    background-color: #3f4eb6;
+    color: white;
+    padding: 1.25rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pricing-total-label {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.pricing-total-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+/* Custom time select */
+.time-selector {
+    width: 100%;
+}
+
+.custom-time-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233f4eb6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1em;
+    padding-right: 2.5rem;
+}

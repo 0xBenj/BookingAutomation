@@ -1,4 +1,20 @@
+:root {
+  --primary-color: #4f46e5;
+  --primary-hover: #4338ca;
+  --secondary-color: #f9fafb;
+  --text-primary: #1f2937;
+  --text-secondary: #4b5563;
+  --border-color: #e5e7eb;
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+body {
+  background-color: var(--secondary-color);
+}
+
 .App {
+  min-height: 100vh;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   text-align: center;
 }
 
@@ -35,4 +51,188 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+.tutorly-container {
+  max-width: 700px;
+  margin: 2rem auto;
+  box-shadow: var(--shadow);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.tutorly-header {
+  background: linear-gradient(135deg, var(--primary-color), #818cf8);
+  color: white;
+  padding: 2rem;
+  text-align: center;
+}
+
+.tutorly-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.tutorly-header p {
+  opacity: 0.9;
+}
+
+.tutorly-form {
+  background: white;
+  padding: 2rem;
+}
+
+.form-section {
+  margin-bottom: 2rem;
+}
+
+.form-section-title {
+  display: flex;
+  align-items: center;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.form-section-title svg {
+  width: 24px;
+  height: 24px;
+  margin-right: 0.5rem;
+  color: var(--primary-color);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.form-field {
+  margin-bottom: 1.25rem;
+}
+
+.form-field label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.form-field select,
+.form-field input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  background-color: white;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.form-field select:focus,
+.form-field input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  ring: 2px;
+  ring-color: var(--primary-color);
+}
+
+.form-field select:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+}
+
+.button-primary {
+  width: 100%;
+  background-color: var(--primary-color);
+  color: white;
+  font-weight: 600;
+  font-size: 1rem;
+  padding: 0.875rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button-primary:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.button-primary svg {
+  width: 20px;
+  height: 20px;
+  margin-right: 0.5rem;
+}
+
+.form-footer {
+  text-align: center;
+  margin-top: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.input-options {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.input-radio-card {
+  flex: 1;
+  position: relative;
+  cursor: pointer;
+}
+
+.input-radio-card input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.radio-card-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+.input-radio-card input:checked ~ .radio-card-content {
+  border-color: var(--primary-color);
+  background-color: rgba(79, 70, 229, 0.05);
+}
+
+.tutorly-footer {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+/* Animation for form submission */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.loading {
+  animation: pulse 1.5s ease-in-out infinite;
 }
