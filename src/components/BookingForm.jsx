@@ -1,5 +1,26 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import './BookingForm.css';
+import { tutorsBySubject } from '../data/tutors';
+import { loadStripe } from '@stripe/stripe-js';
+import {
+  Elements,
+  PaymentElement,
+  useStripe,
+  useElements,
+} from '@stripe/react-stripe-js';
+
+// Use hardcoded key as fallback for debugging
+const STRIPE_KEY = 'pk_test_51PdWcULpPq0mc5HYMk8I4lHiTwBCj1YvTbhLWUNPfVwoksYeQEu50aTAOSQccnWznTIuVoWt7waiKJdfEZsNyBfn005WGD7VVq';
+const stripeKey = process.env.REACT_APP_STRIPE_PUBLIC_KEY || STRIPE_KEY;
+console.log("Stripe Key Available:", !!stripeKey, "Key length:", stripeKey ? stripeKey.length : 0);
+
+try {
+  var stripePromise = loadStripe(stripeKey);
+  console.log("Stripe initialization successful");
+} catch (error) {
+  console.error("Error initializing Stripe:", error);
+  var stripePromise = null;
+}
 
 // SVG icons as components for the different sections
 const PersonIcon = () => (
@@ -132,22 +153,99 @@ const calculatePrice = (classSize, classDuration) => {
   };
 };
 
-// Create time slot options in 15-minute increments
-const generateTimeOptions = () => {
+// Generate hour and minute options
+const generateHourOptions = () => {
   const options = [];
   for (let hour = 0; hour < 24; hour++) {
-    for (let minute of [0, 15, 30, 45]) {
-      const hourStr = hour.toString().padStart(2, '0');
-      const minuteStr = minute.toString().padStart(2, '0');
-      const value = `${hourStr}:${minuteStr}`;
-      const label = `${hourStr}:${minuteStr}`;
-      options.push({ value, label });
-    }
+    const value = hour.toString().padStart(2, '0');
+    options.push({ value, label: value });
   }
   return options;
 };
 
-const timeOptions = generateTimeOptions();
+const generateMinuteOptions = () => {
+  const options = [];
+  for (let minute of [0, 15, 30, 45]) {
+    const value = minute.toString().padStart(2, '0');
+    options.push({ value, label: value });
+  }
+  return options;
+};
+
+const hourOptions = generateHourOptions();
+const minuteOptions = generateMinuteOptions();
+
+// Memoize the CheckoutForm component
+const CheckoutForm = React.memo(({ handlePaymentSuccess, handlePaymentError, totalPrice }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setIsProcessing(true);
+    setErrorMessage('');
+
+    const { error, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      redirect: 'if_required',
+    });
+
+    if (error) {
+      console.error('Payment error:', error);
+      setErrorMessage(error.message || 'An unexpected error occurred.');
+      handlePaymentError(error.message);
+    } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+      handlePaymentSuccess(paymentIntent.id);
+    } else {
+      setErrorMessage('Payment status unclear. Please check your email for confirmation.');
+    }
+
+    setIsProcessing(false);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="payment-form">
+      <div className="payment-summary">
+        <h3>Payment Summary</h3>
+        <p className="payment-amount">Total Amount: <strong>€{totalPrice.toFixed(2)}</strong></p>
+      </div>
+      
+      <div className="payment-element-container">
+        <PaymentElement />
+      </div>
+      
+      {errorMessage && (
+        <div className="payment-error">
+          <ErrorIcon />
+          {errorMessage}
+        </div>
+      )}
+      
+      <button 
+        disabled={isProcessing || !stripe || !elements} 
+        className="button-primary payment-button"
+      >
+        {isProcessing ? (
+          <>
+            <svg className="loading-spinner" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+            </svg>
+            Processing Payment...
+          </>
+        ) : (
+          "Pay Now"
+        )}
+      </button>
+    </form>
+  );
+});
 
 const BookingForm = () => {
   const [formData, setFormData] = useState({
@@ -160,6 +258,8 @@ const BookingForm = () => {
     classFormat: '',
     classSize: '',
     classDuration: '',
+    preferredTimeHour: '',
+    preferredTimeMinute: '',
     preferredTime: '',
     preferredDate: '',
     tutorPreference: '',
@@ -175,6 +275,13 @@ const BookingForm = () => {
     pricePerPerson: 0,
     totalPrice: 0
   });
+  
+  // Payment related states
+  const [showPayment, setShowPayment] = useState(false);
+  const [clientSecret, setClientSecret] = useState('');
+  const [paymentIntentId, setPaymentIntentId] = useState('');
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [paymentOptions, setPaymentOptions] = useState({});
 
   // Update price whenever class size or duration changes
   useEffect(() => {
@@ -219,6 +326,37 @@ const BookingForm = () => {
     }
   }, [formErrors]); // Only depends on formErrors
 
+  // Handle time change and combine hours and minutes
+  const handleTimeChange = useCallback((e) => {
+    const { name, value } = e.target;
+    
+    setFormData(prev => {
+      const newFormData = {
+        ...prev,
+        [name]: value
+      };
+      
+      // If we have both hour and minute, update the combined time
+      if (name === 'preferredTimeHour' && prev.preferredTimeMinute || 
+          name === 'preferredTimeMinute' && prev.preferredTimeHour) {
+        const hour = name === 'preferredTimeHour' ? value : prev.preferredTimeHour;
+        const minute = name === 'preferredTimeMinute' ? value : prev.preferredTimeMinute;
+        newFormData.preferredTime = `${hour}:${minute}`;
+      }
+      
+      return newFormData;
+    });
+    
+    // Clear errors
+    if (formErrors.preferredTime) {
+      setFormErrors(prev => {
+        const newErrors = {...prev};
+        delete newErrors.preferredTime;
+        return newErrors;
+      });
+    }
+  }, [formErrors]);
+
   // Form validation
   const validateForm = () => {
     const errors = {};
@@ -255,37 +393,107 @@ const BookingForm = () => {
     setError(null);
     
     try {
-      // Calculate price and add to form data
+      // Calculate price
       const { totalPrice } = calculatePrice(formData.classSize, formData.classDuration);
-      const bookingDataWithPrice = {
-        ...formData,
-        price: totalPrice.toFixed(2)
-      };
       
-      // Send booking data to your Express server
-      const response = await fetch('http://localhost:3001/api/bookings', {
+      console.log("Creating payment intent for amount:", totalPrice.toFixed(2));
+      
+      // Create a payment intent
+      const response = await fetch('http://localhost:3001/api/create-payment-intent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(bookingDataWithPrice)
+        body: JSON.stringify({
+          amount: totalPrice.toFixed(2),
+          customerEmail: formData.email,
+          bookingData: formData
+        })
+      });
+      
+      // Log the raw response for debugging
+      console.log("Payment intent response status:", response.status);
+      
+      const result = await response.json();
+      console.log("Payment intent response:", result);
+      
+      if (!response.ok) {
+        throw new Error(result.message || result.error || 'Failed to initialize payment');
+      }
+      
+      // Store the client secret and payment intent ID
+      setClientSecret(result.clientSecret);
+      setPaymentIntentId(result.paymentIntentId);
+      
+      // Set payment options with billing details for Stripe
+      setPaymentOptions({
+        appearance: {
+          theme: 'stripe',
+          variables: {
+            colorPrimary: '#3f4eb6',
+          },
+        },
+        defaultValues: {
+          billingDetails: {
+            name: `${formData.firstName} ${formData.lastName}`,
+            email: formData.email,
+            phone: formData.phone,
+          }
+        }
+      });
+      
+      // Show the payment form
+      setShowPayment(true);
+      
+      // Scroll to payment section
+      setTimeout(() => {
+        const paymentSection = document.getElementById('payment-section');
+        if (paymentSection) {
+          paymentSection.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+      
+    } catch (err) {
+      console.error('Error initializing payment:', err);
+      setError(`An error occurred while setting up payment: ${err.message}. Please try again or contact support.`);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handlePaymentSuccess = async (paymentId) => {
+    try {
+      // Save booking data after successful payment
+      const response = await fetch('http://localhost:3001/api/payment-success', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paymentIntentId: paymentId || paymentIntentId,
+          bookingData: formData
+        })
       });
       
       const result = await response.json();
       
       if (!response.ok) {
-        throw new Error(result.message || 'Failed to submit booking');
+        throw new Error(result.message || 'Failed to save booking data');
       }
       
-      // If successful, proceed with showing the success message
+      // Set payment as successful and show thank you page
+      setPaymentSuccess(true);
       setSubmitted(true);
       
     } catch (err) {
-      console.error('Error submitting form:', err);
-      setError('An error occurred while submitting the form. Please try again.');
-    } finally {
-      setLoading(false);
+      console.error('Error saving booking after payment:', err);
+      setError('Payment successful, but there was an issue saving your booking. Please contact us.');
     }
+  };
+  
+  const handlePaymentError = (errorMessage) => {
+    setError(`Payment error: ${errorMessage}`);
+    setShowPayment(true); // Keep payment form visible to retry
   };
 
   // Memoized button select component
@@ -353,23 +561,71 @@ const BookingForm = () => {
   // Success message
   if (submitted) {
     return (
-      <div className="tutorly-container na">
+      <div className="tutorly-container">
         <div className="tutorly-header">
-          <h1>Thank You!</h1>
-          <p>Your booking request has been received. We'll be in touch shortly!</p>
+          <h1>Thank You for Your Booking!</h1>
+          <p>Your payment was successful and your booking has been confirmed.</p>
         </div>
         <div className="tutorly-form success-message">
           <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
             <polyline points="22 4 12 14.01 9 11.01"></polyline>
           </svg>
-          <h2>Booking Request Submitted</h2>
-          <p>We've received your booking request and will get back to you soon to confirm the details.</p>
+          <h2>Booking Confirmed</h2>
+          <p>We've received your payment and your booking is now confirmed. You'll receive an email with all the details shortly.</p>
+          <div className="booking-details">
+            <p><strong>Subject:</strong> {formData.subjectCategory}</p>
+            <p><strong>Date:</strong> {formData.preferredDate}</p>
+            <p><strong>Time:</strong> {formData.preferredTime}</p>
+            <p><strong>Format:</strong> {formData.classFormat}</p>
+            <p><strong>Class Size:</strong> {formData.classSize}</p>
+            <p><strong>Duration:</strong> {formData.classDuration}</p>
+          </div>
           <p className="contact-info">If you have any questions, please contact us at <a href="mailto:info@tutorly.com">info@tutorly.com</a></p>
         </div>
       </div>
     );
   }
+
+  // Replace the time select with TimeSelector component
+  const TimeSelector = () => (
+    <div className={`form-field ${formErrors.preferredTime ? 'has-error' : ''}`}>
+      <label>Time <span className="required">*</span></label>
+      <div className="time-selector-container">
+        <select
+          name="preferredTimeHour"
+          value={formData.preferredTimeHour}
+          onChange={handleTimeChange}
+          required
+          className="form-field custom-time-select"
+        >
+          <option value="">Hour</option>
+          {hourOptions.map(option => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <div className="time-label">:</div>
+        <select
+          name="preferredTimeMinute"
+          value={formData.preferredTimeMinute}
+          onChange={handleTimeChange}
+          required
+          className="form-field custom-time-select"
+        >
+          <option value="">Min</option>
+          {minuteOptions.map(option => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="field-hint">24-hour format</div>
+      {formErrors.preferredTime && <div className="error-text">{formErrors.preferredTime}</div>}
+    </div>
+  );
 
   return (
     <div className="tutorly-container">
@@ -419,249 +675,263 @@ const BookingForm = () => {
           </div>
         </div>
         
-        <form onSubmit={handleSubmit} noValidate>
-          {/* Personal Information Section */}
-          <FormSection 
-            id="personal" 
-            title="Personal Information" 
-            icon={<PersonIcon />}
-          >
-            <div className="form-field-group">
-              <label>Name <span className="required">*</span></label>
-              <div className="form-grid">
-                <div className={`form-field ${formErrors.firstName ? 'has-error' : ''}`}>
-                  <input 
-                    type="text" 
-                    name="firstName" 
-                    placeholder="First Name" 
-                    value={formData.firstName} 
-                    onChange={handleChange} 
-                    required 
-                    className="material-input"
-                  />
-                  {formErrors.firstName && <div className="error-text">{formErrors.firstName}</div>}
+        {!showPayment ? (
+          <form onSubmit={handleSubmit} noValidate>
+            {/* Personal Information Section */}
+            <FormSection 
+              id="personal" 
+              title="Personal Information" 
+              icon={<PersonIcon />}
+            >
+              <div className="form-field-group">
+                <label>Name <span className="required">*</span></label>
+                <div className="form-grid">
+                  <div className={`form-field ${formErrors.firstName ? 'has-error' : ''}`}>
+                    <input 
+                      type="text" 
+                      name="firstName" 
+                      placeholder="First Name" 
+                      value={formData.firstName} 
+                      onChange={handleChange} 
+                      required 
+                      className="material-input"
+                    />
+                    {formErrors.firstName && <div className="error-text">{formErrors.firstName}</div>}
+                  </div>
+                  <div className={`form-field ${formErrors.lastName ? 'has-error' : ''}`}>
+                    <input 
+                      type="text" 
+                      name="lastName" 
+                      placeholder="Last Name" 
+                      value={formData.lastName} 
+                      onChange={handleChange} 
+                      required 
+                      className="material-input"
+                    />
+                    {formErrors.lastName && <div className="error-text">{formErrors.lastName}</div>}
+                  </div>
                 </div>
-                <div className={`form-field ${formErrors.lastName ? 'has-error' : ''}`}>
-                  <input 
-                    type="text" 
-                    name="lastName" 
-                    placeholder="Last Name" 
-                    value={formData.lastName} 
-                    onChange={handleChange} 
-                    required 
-                    className="material-input"
-                  />
-                  {formErrors.lastName && <div className="error-text">{formErrors.lastName}</div>}
-                </div>
-              </div>
-            </div>
-            
-            <div className={`form-field ${formErrors.email ? 'has-error' : ''}`}>
-              <label>Email <span className="required">*</span></label>
-              <input 
-                type="email" 
-                name="email" 
-                value={formData.email} 
-                onChange={handleChange} 
-                required 
-                className="material-input"
-              />
-              {formErrors.email && <div className="error-text">{formErrors.email}</div>}
-            </div>
-            
-            <div className="form-field checkbox-field">
-              <label>
-                <input 
-                  type="checkbox" 
-                  name="newsletterSignup" 
-                  checked={formData.newsletterSignup} 
-                  onChange={handleChange} 
-                />
-                Sign up for news and updates
-              </label>
-            </div>
-            
-            <div className={`form-field ${formErrors.phone ? 'has-error' : ''}`}>
-              <label>Phone number (include prefix, example: 34### ...) <span className="required">*</span></label>
-              <input 
-                type="tel" 
-                name="phone" 
-                value={formData.phone} 
-                onChange={handleChange} 
-                required 
-                className="material-input"
-              />
-              {formErrors.phone && <div className="error-text">{formErrors.phone}</div>}
-            </div>
-          </FormSection>
-          
-          {/* Class Details Section */}
-          <FormSection 
-            id="class" 
-            title="Class Details" 
-            icon={<ClassIcon />}
-          >
-            <div className={`form-field ${formErrors.subjectCategory ? 'has-error' : ''}`}>
-              <label>Which subject are you interested in? <span className="required">*</span></label>
-              <select 
-                name="subjectCategory" 
-                value={formData.subjectCategory} 
-                onChange={handleChange} 
-                required
-                className="material-select"
-              >
-                <option value="">Select an option</option>
-                {subjectOptions.map(option => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-              {formErrors.subjectCategory && <div className="error-text">{formErrors.subjectCategory}</div>}
-            </div>
-            
-            <div className="form-field">
-              <label>In the subject you have chosen, what topic would you like to cover? (optional)</label>
-              <textarea 
-                name="specificTopic" 
-                value={formData.specificTopic} 
-                onChange={handleChange} 
-                placeholder="Describe the specific topics you'd like to learn in detail."
-                className="material-textarea"
-                rows={6}
-              />
-            </div>
-            
-            {/* Class format as button-select */}
-            <ButtonSelect
-              label="Class format"
-              required={true}
-              name="classFormat"
-              options={[
-                { value: "Online", label: "Online" },
-                { value: "In-Person", label: "In-Person" }
-              ]}
-              value={formData.classFormat}
-              onChange={handleButtonSelect}
-            />
-            
-            {/* Class size as button-select */}
-            <ButtonSelect
-              label="Size of class"
-              required={true}
-              name="classSize"
-              options={[
-                { value: "Solo", label: "Solo" },
-                { value: "Duo", label: "Duo" },
-                { value: "Trio", label: "Trio" },
-                { value: "Quadrio", label: "Quadrio" }
-              ]}
-              value={formData.classSize}
-              onChange={handleButtonSelect}
-            />
-          </FormSection>
-          
-          {/* Schedule Section */}
-          <FormSection 
-            id="schedule" 
-            title="Schedule" 
-            icon={<TimeIcon />}
-          >
-            {/* Class duration as button-select */}
-            <ButtonSelect
-              label="Class duration"
-              required={true}
-              name="classDuration"
-              options={[
-                { value: "1 hour", label: "1 hour" },
-                { value: "1.5 hours", label: "1.5 hours" },
-                { value: "2 hours", label: "2 hours" },
-                { value: "2.5 hours", label: "2.5 hours" }
-              ]}
-              value={formData.classDuration}
-              onChange={handleButtonSelect}
-            />
-            
-            <div className="form-grid">
-              <div className={`form-field ${formErrors.preferredTime ? 'has-error' : ''}`}>
-                <label>Time <span className="required">*</span></label>
-                <select
-                  name="preferredTime"
-                  value={formData.preferredTime}
-                  onChange={handleChange}
-                  required
-                  className="form-field custom-time-select"
-                >
-                  <option value="">Select a time</option>
-                  {timeOptions.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <div className="field-hint">24-hour format (15-minute intervals)</div>
-                {formErrors.preferredTime && <div className="error-text">{formErrors.preferredTime}</div>}
               </div>
               
-              <div className={`form-field ${formErrors.preferredDate ? 'has-error' : ''}`}>
-                <label>Date <span className="required">*</span></label>
+              <div className={`form-field ${formErrors.email ? 'has-error' : ''}`}>
+                <label>Email <span className="required">*</span></label>
                 <input 
-                  type="date" 
-                  name="preferredDate" 
-                  value={formData.preferredDate} 
+                  type="email" 
+                  name="email" 
+                  value={formData.email} 
                   onChange={handleChange} 
                   required 
                   className="material-input"
                 />
-                <div className="field-hint">Must be at least 24 hours in advance</div>
-                {formErrors.preferredDate && <div className="error-text">{formErrors.preferredDate}</div>}
+                {formErrors.email && <div className="error-text">{formErrors.email}</div>}
               </div>
-            </div>
-          </FormSection>
-          
-          {/* Preferences Section */}
-          <FormSection 
-            id="preferences" 
-            title="Preferences & Additional Info" 
-            icon={<TutorIcon />}
-          >
-            <div className={`form-field ${formErrors.tutorPreference ? 'has-error' : ''}`}>
-              <label>Do you have any tutor preferences? <span className="required">*</span></label>
-              <select 
-                name="tutorPreference" 
-                value={formData.tutorPreference} 
-                onChange={handleChange} 
-                required
-                className="material-select"
-              >
-                <option value="">Select an option</option>
-                <option value="No preference">No preference</option>
-                <option value="Female tutor">Female tutor</option>
-                <option value="Male tutor">Male tutor</option>
-              </select>
-              {formErrors.tutorPreference && <div className="error-text">{formErrors.tutorPreference}</div>}
-            </div>
+              
+              <div className="form-field checkbox-field">
+                <label>
+                  <input 
+                    type="checkbox" 
+                    name="newsletterSignup" 
+                    checked={formData.newsletterSignup} 
+                    onChange={handleChange} 
+                  />
+                  Sign up for news and updates
+                </label>
+              </div>
+              
+              <div className={`form-field ${formErrors.phone ? 'has-error' : ''}`}>
+                <label>Phone number (include prefix, example: 34### ...) <span className="required">*</span></label>
+                <input 
+                  type="tel" 
+                  name="phone" 
+                  value={formData.phone} 
+                  onChange={handleChange} 
+                  required 
+                  className="material-input"
+                />
+                {formErrors.phone && <div className="error-text">{formErrors.phone}</div>}
+              </div>
+            </FormSection>
             
-            <div className={`form-field ${formErrors.referralSource ? 'has-error' : ''}`}>
-              <label>How did you hear about us? <span className="required">*</span></label>
-              <select 
-                name="referralSource" 
-                value={formData.referralSource} 
-                onChange={handleChange} 
-                required
-                className="material-select"
-              >
-                <option value="">Select an option</option>
-                <option value="Google">Google</option>
-                <option value="Social Media">Social Media</option>
-                <option value="Friend">Friend</option>
-                <option value="Advertisement">Advertisement</option>
-                <option value="Other">Other</option>
-              </select>
-              {formErrors.referralSource && <div className="error-text">{formErrors.referralSource}</div>}
-            </div>
+            {/* Class Details Section */}
+            <FormSection 
+              id="class" 
+              title="Class Details" 
+              icon={<ClassIcon />}
+            >
+             
+
+              <div className={`form-field ${formErrors.subjectCategory ? 'has-error' : ''}`}>
+                <label>Which subject are you interested in? <span className="required">*</span></label>
+                <select 
+                  name="subjectCategory" 
+                  value={formData.subjectCategory} 
+                  onChange={handleChange} 
+                  required
+                  className="material-select"
+                >
+                  <option value="">Select an option</option>
+                  {subjectOptions.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+                {formErrors.subjectCategory && <div className="error-text">{formErrors.subjectCategory}</div>}
+              </div>
+              
+              <div className="form-field">
+                <label>In the subject you have chosen, what topic would you like to cover? (optional)</label>
+                <textarea 
+                  name="specificTopic" 
+                  value={formData.specificTopic} 
+                  onChange={handleChange} 
+                  placeholder="Describe the specific topics you'd like to learn in detail."
+                  className="material-textarea"
+                  rows={6}
+                />
+              </div>
+              
+              <div className="form-section-grid format-section">
+                {/* Class format as 2x1 grid */}
+                <div className="form-field-grid">
+                  <label>Class format <span className="required">*</span></label>
+                  <div className="grid-2x2">
+                    {[
+                      { value: "Online", label: "Online" },
+                      { value: "In-Person", label: "In-Person" }
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`grid-button ${formData.classFormat === option.value ? 'selected' : ''}`}
+                        onClick={() => handleButtonSelect('classFormat', option.value)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  {formErrors.classFormat && <div className="error-text">{formErrors.classFormat}</div>}
+                </div>
+              </div>
+              
+              <div className="form-section-grid">
+                {/* Class size as 2x2 grid */}
+                <div className="form-field-grid">
+                  <label>Size of class <span className="required">*</span></label>
+                  <div className="grid-2x2">
+                    {[
+                      { value: "Solo", label: "Solo" },
+                      { value: "Duo", label: "Duo" },
+                      { value: "Trio", label: "Trio" },
+                      { value: "Quadrio", label: "Quadrio" }
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`grid-button ${formData.classSize === option.value ? 'selected' : ''}`}
+                        onClick={() => handleButtonSelect('classSize', option.value)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  {formErrors.classSize && <div className="error-text">{formErrors.classSize}</div>}
+                </div>
+
+                {/* Class duration as 2x2 grid */}
+                <div className="form-field-grid">
+                  <label>Class duration <span className="required">*</span></label>
+                  <div className="grid-2x2">
+                    {[
+                      { value: "1 hour", label: "1 hour" },
+                      { value: "1.5 hours", label: "1.5 hours" },
+                      { value: "2 hours", label: "2 hours" },
+                      { value: "2.5 hours", label: "2.5 hours" }
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`grid-button ${formData.classDuration === option.value ? 'selected' : ''}`}
+                        onClick={() => handleButtonSelect('classDuration', option.value)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  {formErrors.classDuration && <div className="error-text">{formErrors.classDuration}</div>}
+                </div>
+              </div>
+            </FormSection>
             
-            {/* Pricing Summary moved to end of form */}
+            {/* Schedule Section */}
+            <FormSection 
+              id="schedule" 
+              title="Schedule" 
+              icon={<TimeIcon />}
+            >
+              <div className="form-grid">
+                <TimeSelector />
+                
+                <div className={`form-field ${formErrors.preferredDate ? 'has-error' : ''}`}>
+                  <label>Date <span className="required">*</span></label>
+                  <input 
+                    type="date" 
+                    name="preferredDate" 
+                    value={formData.preferredDate} 
+                    onChange={handleChange} 
+                    required 
+                    className="material-input"
+                  />
+                  <div className="field-hint">Must be at least 24 hours in advance</div>
+                  {formErrors.preferredDate && <div className="error-text">{formErrors.preferredDate}</div>}
+                </div>
+              </div>
+            </FormSection>
+            
+            {/* Preferences Section */}
+            <FormSection 
+              id="preferences" 
+              title="Preferences & Additional Info" 
+              icon={<TutorIcon />}
+            >
+              <div className={`form-field ${formErrors.tutorPreference ? 'has-error' : ''}`}>
+                <label>Do you have any tutor preferences? <span className="required">*</span></label>
+                <select 
+                  name="tutorPreference" 
+                  value={formData.tutorPreference} 
+                  onChange={handleChange} 
+                  required
+                  className="material-select"
+                >
+                  <option value="">Select an option</option>
+                  <option value="No preference">No preference</option>
+                  {formData.subjectCategory && tutorsBySubject[formData.subjectCategory]?.map(tutor => (
+                    <option key={tutor.email} value={tutor.name}>{tutor.name}</option>
+                  ))}
+                </select>
+                {formErrors.tutorPreference && <div className="error-text">{formErrors.tutorPreference}</div>}
+              </div>
+              
+              <div className={`form-field ${formErrors.referralSource ? 'has-error' : ''}`}>
+                <label>How did you hear about us? <span className="required">*</span></label>
+                <select 
+                  name="referralSource" 
+                  value={formData.referralSource} 
+                  onChange={handleChange} 
+                  required
+                  className="material-select"
+                >
+                  <option value="">Select an option</option>
+                  <option value="Google">Google</option>
+                  <option value="Social Media">Social Media</option>
+                  <option value="Friend">Friend</option>
+                  <option value="Advertisement">Advertisement</option>
+                  <option value="Other">Other</option>
+                </select>
+                {formErrors.referralSource && <div className="error-text">{formErrors.referralSource}</div>}
+              </div>
+            </FormSection>
+
             <PricingSummary />
-            
+
             <div className="form-submit">
               <button 
                 className="button-primary"
@@ -676,12 +946,52 @@ const BookingForm = () => {
                     Processing...
                   </>
                 ) : (
-                  "Continue to Payment"
+                  "Proceed to Payment"
                 )}
               </button>
             </div>
-          </FormSection>
-        </form>
+          </form>
+        ) : (
+          <div id="payment-section" className="payment-section">
+            <h2>Payment Information</h2>
+            <p className="payment-instruction">Please complete your payment to finalize your booking.</p>
+            
+            {clientSecret ? (
+              stripePromise ? (
+                <Elements stripe={stripePromise} options={{ clientSecret, ...paymentOptions }}>
+                  <CheckoutForm 
+                    handlePaymentSuccess={handlePaymentSuccess}
+                    handlePaymentError={handlePaymentError}
+                    totalPrice={priceDetails.totalPrice}
+                  />
+                </Elements>
+              ) : (
+                <div className="payment-error">
+                  <ErrorIcon />
+                  <div>
+                    <p>Unable to initialize payment system. Please refresh the page or try again later.</p>
+                    <p>If the problem persists, please contact us at <a href="mailto:info@tutorly.com">info@tutorly.com</a></p>
+                    <p><small>Technical Info: Stripe SDK initialization failed</small></p>
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="payment-processing">
+                <svg className="loading-spinner" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+                </svg>
+                <span>Preparing payment form...</span>
+              </div>
+            )}
+            
+            <button 
+              onClick={() => setShowPayment(false)} 
+              className="button-secondary back-button"
+            >
+              Back to Form
+            </button>
+          </div>
+        )}
       </div>
       <div className="tutorly-footer">
         <p>&copy; {new Date().getFullYear()} Tutorly. All rights reserved.</p>

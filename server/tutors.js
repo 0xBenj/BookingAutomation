@@ -111,6 +111,7 @@ const tutorsBySubject = {
   ],
   "Business Law": [
     { email: "temp2@jcnorris.com", name: "Norris" },
+    { email: "benben113el@gmail.com", name: "Beni" },
     // { email: "federico.martino21@gmail.com", name: "Federico Martino" },
     // { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
     // { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },

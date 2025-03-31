@@ -13,6 +13,30 @@ Tutorly is a platform designed to connect students with tutors for personalized 
 
 ---
 
+## Environment Setup
+
+For the application to work correctly, you need to set up the following environment variables:
+
+### Client-side Environment Variables
+Create a `.env.local` file in the project root with:
+```
+REACT_APP_STRIPE_PUBLIC_KEY=pk_test_your_stripe_public_key
+```
+
+### Server-side Environment Variables
+Create a `.env` file in the server directory with:
+```
+STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+PORT=3001
+# Other server environment variables...
+```
+
+Note: Never commit your actual Stripe keys to version control. The prefixes should be:
+- For test mode: pk_test_... and sk_test_...
+- For production: pk_live_... and sk_live_...
+
+---
+
 ## Development Information
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).

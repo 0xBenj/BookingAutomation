@@ -1,18 +1,11 @@
 require('dotenv').config();
 const nodemailer = require('nodemailer');
 
-//===================================================================
-// EMAIL SERVICE MODULE
-// Handles all email communications for the booking system
-//===================================================================
-
 // Create reusable transporter
 let transporter = null;
 
 /**
  * Initialize email transporter
- * Creates a reusable nodemailer transporter using environment credentials
- * Only initializes once and reuses the connection
  */
 function initializeTransporter() {
   // Check if already initialized
@@ -36,12 +29,8 @@ function initializeTransporter() {
 
 /**
  * Send notification emails to tutors about a new booking
- * 
- * This function sends a BCC email to all tutors who can teach the subject,
- * notifying them of a new tutoring opportunity they can claim.
- * 
  * @param {Array} tutorEmails - Array of tutor email addresses
- * @param {Object} bookingData - Booking information (subject, date, time, etc.)
+ * @param {Object} bookingData - Booking information
  * @param {Object} eventData - Google Calendar event information
  * @returns {Promise} - Result of sending emails
  */
@@ -128,13 +117,9 @@ async function sendTutorNotifications(tutorEmails, bookingData, eventData) {
 }
 
 /**
- * Send confirmation notification to a tutor who has claimed a session
- * 
- * This function sends a detailed email to the tutor with all session 
- * information and student contact details after they've claimed a session.
- * 
+ * Send notification to a tutor who has claimed a session
  * @param {string} tutorEmail - Tutor email address
- * @param {Object} bookingData - Complete booking information
+ * @param {Object} bookingData - Booking information
  * @param {Object} eventData - Google Calendar event information
  * @returns {Promise} - Result of sending email
  */

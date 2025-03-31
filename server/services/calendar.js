@@ -1,11 +1,24 @@
 require('dotenv').config();
 const { google } = require('googleapis');
-const tutorsModule = require('./tutors');
+const tutorsModule = require('../tutors');
 const mailerModule = require('./mailer');
+
+//===================================================================
+// GOOGLE CALENDAR SERVICE
+// Handles creating events, assigning tutors, and managing 
+// the different subject-specific calendars
+//===================================================================
 
 /**
  * Create a Google Calendar event for a booking and notify tutors
- * @param {Object} bookingData - The booking details
+ * 
+ * This is the main calendar integration function that:
+ * 1. Selects the appropriate subject-specific calendar
+ * 2. Creates an "UNASSIGNED" event with booking details
+ * 3. Stores student info securely in private extended properties
+ * 4. Notifies all qualified tutors about the new opportunity
+ * 
+ * @param {Object} bookingData - The complete booking details from the form
  * @returns {Promise<Object>} - The created calendar event
  */
 async function createCalendarEvent(bookingData) {
@@ -116,18 +129,34 @@ async function createCalendarEvent(bookingData) {
       ? `\nPrice: €${bookingData.price}` 
       : '';
 
-    // Create event object
+    // Create a booking reference ID (could be timestamp + random chars)
+    const bookingRef = `REF-${Date.now().toString(36).slice(-6).toUpperCase()}`;
+    
+    // Store all student info in extended properties (private data)
+    const extendedProperties = {
+      private: {
+        bookingRef: bookingRef,
+        studentName: `${bookingData.firstName} ${bookingData.lastName}`,
+        studentEmail: bookingData.email,
+        studentPhone: bookingData.phone,
+        tutorPreference: bookingData.tutorPreference,
+        price: bookingData.price ? bookingData.price.toString() : '',
+        format: bookingData.classFormat,
+        size: bookingData.classSize,
+        duration: bookingData.classDuration,
+        specificTopic: bookingData.specificTopic || ''
+      }
+    };
+
+    // Create event object with privacy-focused description
     const event = {
       summary: `UNASSIGNED - ${bookingData.classSize} ${bookingData.subjectCategory} Tutoring Session`,
       description: `Tutoring session for ${bookingData.specificTopic || bookingData.subjectCategory}
       
-Student: ${bookingData.firstName} ${bookingData.lastName}
-Email: ${bookingData.email}
-Phone: ${bookingData.phone}
 Class Format: ${bookingData.classFormat}
 Class Size: ${bookingData.classSize}
 Duration: ${bookingData.classDuration}
-Tutor Preference: ${bookingData.tutorPreference}${priceInfo}`,
+Booking Reference: ${bookingRef}${priceInfo}`,
       start: {
         dateTime: startDateTime.toISOString(),
         timeZone: 'Europe/Madrid'
@@ -137,7 +166,9 @@ Tutor Preference: ${bookingData.tutorPreference}${priceInfo}`,
         timeZone: 'Europe/Madrid'
       },
       // Gray for unassigned events
-      colorId: '8'
+      colorId: '8',
+      // Store private data in extended properties
+      extendedProperties: extendedProperties
     };
 
     console.log(`Creating event in ${calendarName} calendar`);

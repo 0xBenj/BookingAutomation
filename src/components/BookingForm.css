@@ -173,6 +173,25 @@
     display: block;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
+
+/* Time selector component styling */
+.time-selector-container {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.time-selector-container select {
+    flex: 1;
+    padding-right: 2rem;
+}
+
+.time-selector-container .time-label {
+    display: flex;
+    align-items: center;
+    color: #6b7280;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
   
 .form-field select:focus,
 .form-field input:focus,
@@ -509,4 +528,303 @@
     background-position: right 1rem center;
     background-size: 1em;
     padding-right: 2.5rem;
+}
+
+/* Improved time input styling */
+input[type="time"] {
+  font-family: inherit;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233f4eb6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3ccircle cx='12' cy='12' r='10'%3e%3c/circle%3e%3cpolyline points='12 6 12 12 16 14'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1.2em;
+  padding-right: 2.5rem;
+  transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Time field hint with example time slots */
+.time-slots-hint {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.time-slot-example {
+  font-size: 0.75rem;
+  background-color: #f3f4f6;
+  color: #6b7280;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* Style placeholders in inputs */
+input::placeholder {
+  color: #a0aec0;
+}
+
+/* Consistent styling for date and time inputs */
+input[type="date"], 
+input[type="time"] {
+  background-color: white;
+  padding: 0.85rem 1rem;
+  width: 100%;
+  color: #2d3748;
+}
+
+/* Remove browser-specific styling for date and time inputs in WebKit browsers */
+input::-webkit-calendar-picker-indicator {
+  background: transparent;
+  bottom: 0;
+  color: transparent;
+  cursor: pointer;
+  height: 100%;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 100%;
+}
+
+/* Fix for Firefox date/time input styling */
+@-moz-document url-prefix() {
+  input[type="date"],
+  input[type="time"] {
+    padding-right: 5px;
+  }
+}
+
+/* Form section grid layout */
+.form-section-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.form-field-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.grid-2x2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.grid-button {
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.grid-button:hover {
+  background: var(--hover-color);
+}
+
+.grid-button.selected {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}.grid-2x1 {  display: grid;  grid-template-columns: repeat(2, 1fr);  gap: 1rem;  max-width: 400px;}.grid-2x1 .grid-button {  padding: 1.2rem;  font-size: 1rem;}
+
+/* Format selector styling */
+.format-selector {
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.format-selector label {
+  display: block;
+  margin-bottom: 0.6rem;
+  font-weight: 500;
+  color: #2d3748;
+  font-size: 0.95rem;
+}
+
+.format-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.format-button {
+  flex: 1;
+  max-width: 180px;
+  padding: 1rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  background-color: white;
+  font-size: 1rem;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #4b5563;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.format-button:hover {
+  background-color: #f7f8fd;
+  border-color: #c1c6e7;
+}
+
+.format-button.selected {
+  background-color: #3f4eb6;
+  color: white;
+  border-color: #3f4eb6;
+  font-weight: 600;
+  box-shadow: 0 2px 5px rgba(63, 78, 182, 0.2);
+}
+
+/* Add more spacing after format section */
+.format-section {
+  margin-bottom: 2rem;
+}
+
+/* Payment form styles */
+.payment-section {
+  padding: 2rem;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  margin-top: 2rem;
+  border: 1px solid #e9eaf3;
+  transition: all 0.2s ease;
+}
+
+.payment-section h2 {
+  font-size: 1.5rem;
+  color: #2d3748;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.payment-instruction {
+  margin-bottom: 2rem;
+  color: #4b5563;
+  font-size: 1rem;
+}
+
+.payment-form {
+  margin-bottom: 2rem;
+}
+
+.payment-summary {
+  background-color: #f5f7fd;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  border: 1px solid #e2e8f0;
+}
+
+.payment-summary h3 {
+  font-size: 1.2rem;
+  color: #3f4eb6;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.payment-amount {
+  font-size: 1.1rem;
+  color: #2d3748;
+}
+
+.payment-amount strong {
+  font-size: 1.3rem;
+  color: #3f4eb6;
+}
+
+.payment-element-container {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: #fff;
+  border: 1px solid #e2e8f0;
+}
+
+.payment-button {
+  margin-top: 1.5rem;
+}
+
+.payment-error {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  padding: 1rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.button-secondary {
+  background-color: #e2e8f0;
+  color: #4b5563;
+  font-weight: 500;
+  font-size: 1rem;
+  padding: 0.75rem 1.25rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button-secondary:hover {
+  background-color: #cbd5e1;
+}
+
+.back-button {
+  margin-top: 1rem;
+}
+
+/* Booking success details */
+.booking-details {
+  background-color: #f7f9ff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin: 1.5rem 0;
+  text-align: left;
+  border: 1px solid #e2e8f0;
+}
+
+.booking-details p {
+  margin: 0.5rem 0;
+  font-size: 0.95rem;
+}
+
+.booking-details strong {
+  color: #3f4eb6;
+  font-weight: 600;
+}
+
+/* Payment processing state */
+.payment-processing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  text-align: center;
+  color: #4b5563;
+}
+
+.payment-processing .loading-spinner {
+  width: 40px;
+  height: 40px;
+  color: #3f4eb6;
+  animation: rotate 1s linear infinite;
 }

@@ -1,7 +1,24 @@
 require('dotenv').config();
 const { google } = require('googleapis');
 
-// Function to add a booking to Google Sheets
+//===================================================================
+// GOOGLE SHEETS SERVICE
+// Handles storing all booking data in a spreadsheet for
+// record-keeping and reporting purposes
+//===================================================================
+
+/**
+ * Add a new booking record to Google Sheets
+ * 
+ * Appends a new row to the bookings spreadsheet with:
+ * - Timestamp and student contact information
+ * - Subject and class details
+ * - Scheduling preferences
+ * - Pricing information
+ * 
+ * @param {Object} bookingData - All booking information from the form
+ * @returns {Promise<Object>} - The Google Sheets API response
+ */
 async function addBooking(bookingData) {
   try {
     console.log('addBooking function called with data:', bookingData);
@@ -62,7 +79,14 @@ async function addBooking(bookingData) {
   }
 }
 
-// Create headers if the sheet doesn't have them yet
+/**
+ * Initialize the bookings spreadsheet with column headers
+ * 
+ * This should be run once when setting up a new spreadsheet.
+ * Creates the header row with names for all booking data fields.
+ * 
+ * @returns {Promise<Boolean>} - Success status
+ */
 async function initializeSheetHeaders() {
   try {
     const auth = new google.auth.JWT({

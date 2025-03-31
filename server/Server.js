@@ -3,23 +3,56 @@ const express = require('express');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
 const { google } = require('googleapis');
+const path = require('path'); // Add path module
 
-// Import the local modules
-const sheetsModule = require('./sheets');
-const calendarModule = require('./calendar');
+// Debug Stripe key availability
+console.log('Stripe key available:', !!process.env.STRIPE_SECRET_KEY);
+console.log('Stripe key length:', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.length : 0);
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // Add Stripe
+
+//===================================================================
+// MODULE IMPORTS AND INITIALIZATION
+//===================================================================
+const sheetsModule = require('./services/sheets');
+const calendarModule = require('./services/calendar');
+const tutorsModule = require('./tutors');
 
 // Verify exports are available
 console.log('Imported sheets module exports:', Object.keys(sheetsModule));
 console.log('Imported calendar module exports:', Object.keys(calendarModule));
+console.log('Imported tutors module exports:', Object.keys(tutorsModule));
+
+// Log the path to tutors module to verify it's correct
+console.log('Tutors module path:', path.join(__dirname, '../src/data/tutors'));
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(cors());
+// Enhance CORS for development
+app.use(cors({
+  origin: '*', // For development only - change to specific origin in production
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
-// API endpoint to handle booking submissions
+/**
+ * Utility function to parse phone numbers and extract only digits
+ * @param {string} phone - Raw phone number input
+ * @returns {string} Phone number with only digits
+ */
+function parsePhoneNumber(phone) {
+  if (!phone) return '';
+  // Remove all non-digit characters
+  return phone.replace(/\D/g, '');
+}
+
+//===================================================================
+// BOOKING API ENDPOINT
+// Handles incoming booking requests, processes them, and saves to 
+// Google Sheets and Calendar
+//===================================================================
 app.post('/api/bookings', async (req, res) => {
   try {
     console.log('Received booking request:', req.body);
@@ -41,6 +74,11 @@ app.post('/api/bookings', async (req, res) => {
       timestamp: new Date().toISOString(),
       status: req.body.status || 'Pending'
     };
+
+    // Parse phone number to contain only digits
+    if (bookingData.phone) {
+      bookingData.phone = parsePhoneNumber(bookingData.phone);
+    }
 
     // Ensure price is included in the bookingData
     if (!bookingData.price) {
@@ -100,7 +138,117 @@ app.post('/api/bookings', async (req, res) => {
   }
 });
 
-// Simple health check endpoint
+//===================================================================
+// STRIPE PAYMENT ENDPOINTS
+// Handles creating payment intents and processing payments
+//===================================================================
+
+app.post('/api/create-payment-intent', async (req, res) => {
+  try {
+    console.log('Received payment intent request:', req.body);
+    const { amount, bookingData, customerEmail } = req.body;
+    
+    if (!amount) {
+      throw new Error('Amount is required');
+    }
+    
+    // Store booking data in metadata for retrieval later
+    const compressedBookingData = {
+      name: `${bookingData.firstName} ${bookingData.lastName}`,
+      email: bookingData.email,
+      phone: parsePhoneNumber(bookingData.phone),
+      subject: bookingData.subjectCategory,
+      classDetails: `${bookingData.classFormat} - ${bookingData.classSize} - ${bookingData.classDuration}`,
+      dateTime: `${bookingData.preferredDate} at ${bookingData.preferredTime}`,
+      tutor: bookingData.tutorPreference
+    };
+
+    console.log('Creating payment intent with amount:', Math.round(parseFloat(amount) * 100));
+    
+    // Create a PaymentIntent with the order amount and currency
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(parseFloat(amount) * 100), // Convert to cents
+      currency: 'eur',
+      automatic_payment_methods: {
+        enabled: true,
+      },
+      receipt_email: customerEmail,
+      metadata: {
+        bookingInfo: JSON.stringify(compressedBookingData)
+      }
+    });
+
+    console.log('Payment intent created successfully:', paymentIntent.id);
+    res.status(200).json({
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id
+    });
+  } catch (error) {
+    console.error('Error creating payment intent:', error.message);
+    console.error('Error type:', error.type);
+    if (error.raw) {
+      console.error('Stripe error details:', error.raw);
+    }
+    res.status(500).json({ 
+      error: error.message,
+      type: error.type || 'unknown'
+    });
+  }
+});
+
+// Endpoint to handle successful payments and save booking data
+app.post('/api/payment-success', async (req, res) => {
+  try {
+    const { paymentIntentId, bookingData } = req.body;
+    
+    // Verify payment with Stripe
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    
+    if (paymentIntent.status !== 'succeeded') {
+      throw new Error('Payment not successfully completed');
+    }
+    
+    // Parse phone number
+    if (bookingData.phone) {
+      bookingData.phone = parsePhoneNumber(bookingData.phone);
+    }
+    
+    // Add payment info and set status to paid
+    const completeBookingData = {
+      ...bookingData,
+      paymentId: paymentIntentId,
+      paymentStatus: 'Paid',
+      status: 'Confirmed'
+    };
+    
+    // Save to sheets and calendar
+    const [sheetResult, calendarResult] = await Promise.all([
+      sheetsModule.addBooking(completeBookingData),
+      calendarModule.createCalendarEvent(completeBookingData)
+    ]);
+    
+    // Return success response
+    res.status(200).json({
+      success: true,
+      message: 'Booking saved successfully',
+      data: {
+        sheetEntry: sheetResult,
+        calendarEvent: calendarResult
+      }
+    });
+  } catch (error) {
+    console.error('Error processing payment success:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
+
+//===================================================================
+// HEALTH CHECK ENDPOINT
+// Simple endpoint to verify server and modules are running correctly
+//===================================================================
 app.get('/api/health', (req, res) => {
   res.status(200).json({ 
     status: 'ok',
@@ -115,13 +263,19 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// TODO
-// Add these webhook-related functions to your server.js file
+//===================================================================
+// CALENDAR MONITORING SYSTEM
+// Automatically checks for changes in Google Calendar events,
+// especially when tutors claim unassigned sessions
+//===================================================================
 
 // Store event states to detect changes
 const eventStates = {};
 
-// Function to check for calendar changes periodically
+/**
+ * Starts the periodic monitoring of calendars for changes
+ * Runs every minute to detect when tutors claim sessions
+ */
 function startCalendarMonitoring() {
   // Check all calendars every 1 minutes
   setInterval(async () => {
@@ -145,7 +299,11 @@ function startCalendarMonitoring() {
   }, 1 * 60 * 1000); // 1 minute interval
 }
 
-// Extract all calendar IDs from environment variables
+/**
+ * Finds all calendar IDs from environment variables
+ * Looks for variables ending with _CALENDAR_ID
+ * @returns {Object} Map of calendar names to IDs
+ */
 function getAllCalendarIdsFromEnv() {
   const calendars = {};
   
@@ -170,7 +328,12 @@ function getAllCalendarIdsFromEnv() {
   return calendars;
 }
 
-// Check a specific calendar for changes
+/**
+ * Checks a specific calendar for recent changes
+ * Looks at events from the last hour
+ * @param {string} calendarId - Google Calendar ID
+ * @param {string} calendarName - Friendly name for the calendar
+ */
 async function checkCalendarForChanges(calendarId, calendarName) {
   try {
     // Create auth client if needed
@@ -205,7 +368,15 @@ async function checkCalendarForChanges(calendarId, calendarName) {
   }
 }
 
-// Process an event to check for tutor assignment
+/**
+ * Processes each calendar event to detect tutor assignments
+ * If an UNASSIGNED event gets a new attendee, it marks it as assigned
+ * and sends notification emails
+ * @param {Object} event - Google Calendar event object
+ * @param {string} calendarId - ID of the calendar containing this event
+ * @param {Object} calendar - Google Calendar API client
+ * @param {string} calendarName - Friendly name for the calendar
+ */
 async function processEvent(event, calendarId, calendar, calendarName) {
   try {
     const eventId = event.id;
@@ -226,8 +397,22 @@ async function processEvent(event, calendarId, calendar, calendarName) {
       const tutorEmail = tutor.email;
       const tutorName = tutorEmail.split('@')[0].replace(/[.]/g, ' ');
       
-      // Extract student info from description
-      const studentInfo = parseEventDescription(event.description);
+      // Get student info from extended properties (private data)
+      let studentInfo = {}; // Changed from const to let
+      
+      if (event.extendedProperties && event.extendedProperties.private) {
+        const privateProps = event.extendedProperties.private;
+        studentInfo.name = privateProps.studentName;
+        studentInfo.email = privateProps.studentEmail;
+        studentInfo.phone = privateProps.studentPhone;
+        studentInfo.format = privateProps.format;
+        studentInfo.size = privateProps.size;
+        studentInfo.duration = privateProps.duration;
+        studentInfo.specificTopic = privateProps.specificTopic;
+      } else {
+        // Fallback to parsing from description if extended properties aren't available
+        studentInfo = parseEventDescription(event.description);
+      }
       
       // Update the event
       const updatedEvent = await calendar.events.patch({
@@ -258,7 +443,12 @@ async function processEvent(event, calendarId, calendar, calendarName) {
   }
 }
 
-// Parse event description to extract student info
+/**
+ * Extracts student information from event description text
+ * Parses formatted lines like "Student: Name" into an object
+ * @param {string} description - Event description text
+ * @returns {Object} Extracted student information
+ */
 function parseEventDescription(description) {
   if (!description) return {};
   
@@ -286,7 +476,14 @@ function parseEventDescription(description) {
   return info;
 }
 
-// Send email to tutor
+/**
+ * Sends email notification to tutor who claimed a session
+ * Includes all relevant session and student details
+ * @param {string} tutorEmail - Email address of the tutor
+ * @param {Object} event - Google Calendar event object
+ * @param {Object} studentInfo - Information about the student
+ * @returns {boolean} Success status
+ */
 async function sendTutorAssignmentEmail(tutorEmail, event, studentInfo) {
   try {
     // Format date and time
@@ -304,8 +501,18 @@ async function sendTutorAssignmentEmail(tutorEmail, event, studentInfo) {
     
     // Extract subject from event summary
     const summaryParts = event.summary.split(' ');
-    const classSize = summaryParts[1] || '';
-    const subject = summaryParts[2] || '';
+    // Find the subject in the summary (it will be after "ASSIGNED - " or "UNASSIGNED - " and the class size)
+    const classSize = studentInfo.size || summaryParts[1] || '';
+    
+    // Get the subject part - it starts after the status and class size
+    let subjectIndex = 2; // Default position
+    if (summaryParts[0].includes("ASSIGNED")) {
+      // If assigned, there will be the tutor name too, so subject starts later
+      subjectIndex = 3;
+    }
+    
+    // Join the remaining parts to get the full subject
+    const subject = summaryParts.slice(subjectIndex).join(' ').replace('Tutoring Session', '').trim();
     
     // Get the mailer module's transporter
     // If you're using a separate mailer module, you could use that instead
@@ -330,7 +537,7 @@ async function sendTutorAssignmentEmail(tutorEmail, event, studentInfo) {
             <p style="margin: 5px 0;"><strong>Date:</strong> ${formattedDate}</p>
             <p style="margin: 5px 0;"><strong>Time:</strong> ${formattedTime}</p>
             <p style="margin: 5px 0;"><strong>Format:</strong> ${studentInfo.format || 'N/A'}</p>
-            <p style="margin: 5px 0;"><strong>Size:</strong> ${classSize}</p>
+            <p style="margin: 5px 0;"><strong>Size:</strong> ${studentInfo.size || classSize}</p>
             <p style="margin: 5px 0;"><strong>Duration:</strong> ${studentInfo.duration || 'N/A'}</p>
           </div>
           
@@ -364,12 +571,16 @@ async function sendTutorAssignmentEmail(tutorEmail, event, studentInfo) {
   }
 }
 
-// Then in your server setup code (at the bottom), add:
+// Start the calendar monitoring when server loads
 startCalendarMonitoring();
 
+//===================================================================
+// SERVER INITIALIZATION
+//===================================================================
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`API Health check available at: http://localhost:${PORT}/api/health`);
 });
 
 
