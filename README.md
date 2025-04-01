@@ -1,6 +1,4 @@
-# Tutorly
-
-<img src="./logo.svg" alt="Tutorly Logo" width="200"/>
+# Booking Automation
 
 ## Project Overview
 
