@@ -13,9 +13,19 @@ Tutorly is a platform designed to connect students with tutors for personalized 
 - Email notifications for both students and tutors
 - Session tracking and progress reporting
 
+## 🔄 Automated Real-Time Calendar Monitoring System
+
+This powerful background service:
+- ⏱️ **Performs checks every 60 seconds** to detect changes in calendar events
+- 🔍 Automatically identifies when tutors claim previously unassigned sessions
+- 🏷️ Instantly updates event status from "UNASSIGNED" to "ASSIGNED - [Tutor Name]"
+- 📧 Automatically sends detailed email notifications to tutors with complete student contact information
+- 🛡️ Prevents double-booking by only sending the student information email to the tutor that was assigned first
+- 🔄 Runs continuously in the background with no manual intervention required
+
+
 ## System Architecture
 
-The Tutorly booking system uses a modern architecture with several integrated components:
 
 ![Tutorly Booking System Architecture](./BookingSystem-Architecture.png)
 
@@ -90,21 +100,11 @@ EMAIL_PASSWORD=your_app_password
 3. The Google private key needs proper formatting with `\n` for newlines
 4. For Gmail, use an app-specific password rather than your account password
 
-## Calendar Monitoring System
-
-The system includes an automated calendar monitoring service that:
-- Runs every minute to check for changes in calendar events
-- Detects when tutors claim unassigned sessions
-- Updates event status from "UNASSIGNED" to "ASSIGNED"
-- Sends email notifications to tutors with student contact details
-- Prevents double-booking by removing events from other tutors' calendars
-
 ## Installation and Setup
 
 1. Clone the repository
    ```
-   git clone https://github.com/your-username/tutorly.git
-   cd tutorly
+   git clone https://github.com/0xBenj/BookingAutomation.git
    ```
 
 2. Install dependencies for client
@@ -130,10 +130,6 @@ The system includes an automated calendar monitoring service that:
    cd server
    npm start
    ```
-
-## Development Information
-
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ### Available Scripts
 
