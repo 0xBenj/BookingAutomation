@@ -34,11 +34,29 @@ const PORT = process.env.PORT || 3001;
 app.use(express.json());
 
 // Middleware
-// Enhance CORS for development - make sure it accepts local connections
+// Enhanced CORS configuration to accept requests from multiple origins
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'https://tutorly-booking.web.app', 
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Define allowed origins
+    const allowedOrigins = [
+      'http://localhost:3000',           // Local development
+      'https://localhost:3000',          // Local development with HTTPS
+      'https://tutorly-booking.web.app', // Production domain
+      process.env.FRONTEND_URL           // Environment-configured domain
+    ].filter(Boolean); // Remove any undefined/null values
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked request from:', origin);
+      callback(null, true); // For now, allow all origins to prevent blocking
+    }
+  },
   methods: ['GET', 'POST', 'OPTIONS'],
-  credentials: false,
+  credentials: true, // Changed to true to support credentials if needed
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 

@@ -15,7 +15,7 @@ const stripeKey = process.env.REACT_APP_STRIPE_PUBLIC_KEY || STRIPE_KEY;
 console.log("Stripe Key Available:", !!stripeKey, "Key length:", stripeKey ? stripeKey.length : 0);
 
 // For API URL, add a fallback for local development
-const LOCAL_TESTING = false; // Toggle this for local testing
+const LOCAL_TESTING = false; // Change to false for production deployment
 const API_URL = LOCAL_TESTING 
   ? 'http://localhost:3001' 
   : 'https://tutorly-booking-automation.onrender.com';
@@ -25,7 +25,7 @@ const FRONTEND_URL = 'https://tutorly-booking.web.app';
 
 console.log("TESTING MODE:", LOCAL_TESTING ? "LOCAL" : "PRODUCTION");
 console.log("Using API URL:", API_URL);
-console.log("Frontend URL:", FRONTEND_URL);
+console.log("Frontend URL:", FRONTEND_URL); // Update this line to use the constant
 
 // Initialize Stripe with the public key
 const stripePromise = loadStripe(STRIPE_KEY);
