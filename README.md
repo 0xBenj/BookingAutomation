@@ -1,4 +1,4 @@
-# Tutorly
+# Booking Automation
 
 ## Project Overview
 
@@ -7,11 +7,50 @@ Tutorly is a platform designed to connect students with tutors for personalized 
 ### Key Features
 - Student-tutor matching based on subject needs
 - Scheduling and calendar integration
-- Secure messaging between students and tutors
+- Automated tutor assignment system
+- Secure payment processing via Stripe
+- Dynamic pricing based on class size and duration
+- Email notifications for both students and tutors
 - Session tracking and progress reporting
-- Payment processing for tutoring services
 
----
+## 🔄 Automated Real-Time Calendar Monitoring System
+
+This powerful background service:
+- ⏱️ **Performs checks every 60 seconds** to detect changes in calendar events
+- 🔍 Automatically identifies when tutors claim previously unassigned sessions
+- 🏷️ Instantly updates event status from "UNASSIGNED" to "ASSIGNED - [Tutor Name]"
+- 📧 Automatically sends detailed email notifications to tutors with complete student contact information
+- 🛡️ Prevents double-booking by only sending the student information email to the tutor that was assigned first
+- 🔄 Runs continuously in the background with no manual intervention required
+
+
+## System Architecture
+
+
+![Tutorly Booking System Architecture](./BookingSystem-Architecture.png)
+
+### Data Flow
+
+The system's data flow illustrates how information moves through the application:
+
+![Tutorly Booking System Data Flow](./BookingSystem-DataFlow.png)
+
+## Technology Stack
+
+### Frontend
+- React.js
+- TypeScript
+- Stripe Elements for payment UI
+- CSS for styling
+- Hosted on Firebase
+
+### Backend
+- Node.js with Express.js
+- Google Calendar API for scheduling
+- Google Sheets API for data storage
+- Nodemailer for email notifications
+- Stripe API for payment processing
+- Deployed on Render
 
 ## Environment Setup
 
@@ -26,20 +65,71 @@ REACT_APP_STRIPE_PUBLIC_KEY=pk_test_your_stripe_public_key
 ### Server-side Environment Variables
 Create a `.env` file in the server directory with:
 ```
-STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+# Server Configuration
 PORT=3001
-# Other server environment variables...
+
+# Stripe Configuration
+STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+
+# Google Service Account
+GOOGLE_SERVICE_ACCOUNT_EMAIL=your-service-account@project-id.iam.gserviceaccount.com
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour private key here\n-----END PRIVATE KEY-----\n"
+
+# Google Sheets
+SPREADSHEET_ID=your_google_spreadsheet_id
+SHEET_NAME=Bookings
+
+# Google Calendar IDs
+GOOGLE_CALENDAR_ID=your_main_calendar_id@group.calendar.google.com
+MATH_CALENDAR_ID=your_math_calendar_id@group.calendar.google.com
+ACCOUNTING_CALENDAR_ID=your_accounting_calendar_id@group.calendar.google.com
+ECONOMICS_CALENDAR_ID=your_economics_calendar_id@group.calendar.google.com
+# Add other subject-specific calendar IDs as needed
+
+# Email Configuration
+EMAIL_SERVICE=gmail
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASSWORD=your_app_password
 ```
 
-Note: Never commit your actual Stripe keys to version control. The prefixes should be:
-- For test mode: pk_test_... and sk_test_...
-- For production: pk_live_... and sk_live_...
+**Important Notes:**
+1. Never commit your actual API keys to version control
+2. The Stripe key prefixes should be:
+   - For test mode: pk_test_... and sk_test_...
+   - For production: pk_live_... and sk_live_...
+3. The Google private key needs proper formatting with `\n` for newlines
+4. For Gmail, use an app-specific password rather than your account password
 
----
+## Installation and Setup
 
-## Development Information
+1. Clone the repository
+   ```
+   git clone https://github.com/0xBenj/BookingAutomation.git
+   ```
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+2. Install dependencies for client
+   ```
+   npm install
+   ```
+
+3. Install dependencies for server
+   ```
+   cd server
+   npm install
+   cd ..
+   ```
+
+4. Create and configure environment files as described above
+
+5. Start the development servers
+   ```
+   # In one terminal (client)
+   npm start
+   
+   # In another terminal (server)
+   cd server
+   npm start
+   ```
 
 ### Available Scripts
 
@@ -66,44 +156,75 @@ It correctly bundles React in production mode and optimizes the build for the be
 The build is minified and the filenames include the hashes.\
 Your app is ready to be deployed!
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Server Scripts
 
-#### `npm run eject`
+In the server directory, you can run:
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+#### `npm start`
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Starts the Express server in development mode using nodemon for automatic reloading.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+#### `npm run start:prod`
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+Starts the Express server in production mode.
 
-## Learn More
+## Deployment
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Frontend Deployment (Firebase)
+1. Build the React application
+   ```
+   npm run build
+   ```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+2. Deploy to Firebase
+   ```
+   firebase deploy
+   ```
 
-### Code Splitting
+### Backend Deployment (Render)
+1. Push your code to GitHub
+2. Connect your Render account to your GitHub repository
+3. Configure the environment variables in the Render dashboard
+4. Deploy the server
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## Project Structure
 
-### Analyzing the Bundle Size
+```
+tutorly/
+├── public/             # Static files
+├── src/                # React client code
+│   ├── components/     # React components
+│   │   └── BookingForm.jsx  # Main booking form component
+│   ├── data/           # Data files including tutor information
+│   ├── App.js          # Main App component
+│   └── index.js        # Entry point
+├── server/             # Express server code
+│   ├── services/       # Service modules
+│   │   ├── calendar.js # Google Calendar integration
+│   │   ├── sheets.js   # Google Sheets integration
+│   │   └── mailer.js   # Email service
+│   ├── tutors.js       # Tutor management module
+│   └── Server.js       # Main server file
+├── .env.local          # Client environment variables
+├── server/.env         # Server environment variables
+├── BookingSystem-Architecture.png  # Architecture diagram
+├── BookingSystem-DataFlow.png      # Data flow diagram
+└── README.md           # Project documentation
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## Contributing
 
-### Making a Progressive Web App
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## Acknowledgements
 
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- [React](https://reactjs.org/)
+- [Express](https://expressjs.com/)
+- [Google APIs](https://developers.google.com/apis-explorer)
+- [Stripe](https://stripe.com/)
+- [Firebase](https://firebase.google.com/)
+- [Render](https://render.com/)
