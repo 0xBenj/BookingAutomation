@@ -36,7 +36,7 @@ app.use(express.json());
 // Middleware
 // Enhance CORS for development - make sure it accepts local connections
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000', // Allow local frontend
+  origin: process.env.FRONTEND_URL || 'https://tutorly-booking.web.app', 
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: false,
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -326,7 +326,7 @@ app.post('/api/payment-success', async (req, res) => {
 app.post('/api/create-checkout-session', async (req, res) => {
   try {
     console.log('Received checkout session request:', req.body);
-    const { amount, bookingData, customerEmail } = req.body;
+    const { amount, bookingData, customerEmail, frontendUrl } = req.body;
     
     if (!amount) {
       throw new Error('Amount is required');
@@ -359,7 +359,7 @@ app.post('/api/create-checkout-session', async (req, res) => {
     };
 
     // Get the domain for success and cancel URLs
-    const domain = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const domain = frontendUrl || process.env.FRONTEND_URL || 'https://tutorly-booking.web.app';
 
     // Create a Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
