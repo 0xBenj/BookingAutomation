@@ -149,10 +149,12 @@ async function createCalendarEvent(bookingData) {
     };
 
     // Create event object with privacy-focused description
+    // Include student name in the event summary
     const event = {
-      summary: `UNASSIGNED - ${bookingData.classSize} ${bookingData.subjectCategory} Tutoring Session`,
+      summary: `UNASSIGNED - ${bookingData.classSize} ${bookingData.subjectCategory} for ${bookingData.firstName} ${bookingData.lastName}`,
       description: `Tutoring session for ${bookingData.specificTopic || bookingData.subjectCategory}
       
+Student: ${bookingData.firstName} ${bookingData.lastName}
 Class Format: ${bookingData.classFormat}
 Class Size: ${bookingData.classSize}
 Duration: ${bookingData.classDuration}

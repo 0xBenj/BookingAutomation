@@ -9,18 +9,22 @@ import {
   useElements,
 } from '@stripe/react-stripe-js';
 
-// Use hardcoded key as fallback for debugging
-const STRIPE_KEY = 'pk_test_51PdWcULpPq0mc5HYMk8I4lHiTwBCj1YvTbhLWUNPfVwoksYeQEu50aTAOSQccnWznTIuVoWt7waiKJdfEZsNyBfn005WGD7VVq';
+// Use hardcoded key as fallback for debugging 
+const STRIPE_KEY = process.env.REACT_APP_STRIPE_PUBLIC_KEY;
 const stripeKey = process.env.REACT_APP_STRIPE_PUBLIC_KEY || STRIPE_KEY;
 console.log("Stripe Key Available:", !!stripeKey, "Key length:", stripeKey ? stripeKey.length : 0);
 
-try {
-  var stripePromise = loadStripe(stripeKey);
-  console.log("Stripe initialization successful");
-} catch (error) {
-  console.error("Error initializing Stripe:", error);
-  var stripePromise = null;
-}
+// For API URL, add a fallback for local development
+const LOCAL_TESTING = true; // Toggle this for local testing
+const API_URL = LOCAL_TESTING 
+  ? 'http://localhost:3001' 
+  : 'https://tutorly-booking-automation.onrender.com';
+
+console.log("TESTING MODE:", LOCAL_TESTING ? "LOCAL" : "PRODUCTION");
+console.log("Using API URL:", API_URL);
+
+// Initialize Stripe with the public key
+const stripePromise = loadStripe(STRIPE_KEY);
 
 // SVG icons as components for the different sections
 const PersonIcon = () => (
@@ -377,6 +381,21 @@ const BookingForm = () => {
       errors.email = 'Please enter a valid email address';
     }
     
+    // Add validation for booking at least 24 hours in advance
+    if (formData.preferredDate && formData.preferredTime) {
+      const selectedDateTime = new Date(
+        `${formData.preferredDate}T${formData.preferredTime}:00`
+      );
+      
+      // Calculate 24 hours from now
+      const minDateTime = new Date();
+      minDateTime.setHours(minDateTime.getHours() + 24);
+      
+      if (selectedDateTime < minDateTime) {
+        errors.preferredDate = 'Bookings must be made at least 24 hours in advance';
+      }
+    }
+    
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -396,10 +415,10 @@ const BookingForm = () => {
       // Calculate price
       const { totalPrice } = calculatePrice(formData.classSize, formData.classDuration);
       
-      console.log("Creating payment intent for amount:", totalPrice.toFixed(2));
+      console.log("Creating checkout session for amount:", totalPrice.toFixed(2));
       
-      // Create a payment intent
-      const response = await fetch('http://localhost:3001/api/create-payment-intent', {
+      // Create a checkout session instead of a payment intent
+      const response = await fetch(`${API_URL}/api/create-checkout-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -411,60 +430,30 @@ const BookingForm = () => {
         })
       });
       
-      // Log the raw response for debugging
-      console.log("Payment intent response status:", response.status);
-      
       const result = await response.json();
-      console.log("Payment intent response:", result);
+      console.log("Checkout session response:", result);
       
       if (!response.ok) {
         throw new Error(result.message || result.error || 'Failed to initialize payment');
       }
       
-      // Store the client secret and payment intent ID
-      setClientSecret(result.clientSecret);
-      setPaymentIntentId(result.paymentIntentId);
+      // Store the booking data in localStorage before redirecting
+      localStorage.setItem('pendingBookingData', JSON.stringify(formData));
       
-      // Set payment options with billing details for Stripe
-      setPaymentOptions({
-        appearance: {
-          theme: 'stripe',
-          variables: {
-            colorPrimary: '#3f4eb6',
-          },
-        },
-        defaultValues: {
-          billingDetails: {
-            name: `${formData.firstName} ${formData.lastName}`,
-            email: formData.email,
-            phone: formData.phone,
-          }
-        }
-      });
-      
-      // Show the payment form
-      setShowPayment(true);
-      
-      // Scroll to payment section
-      setTimeout(() => {
-        const paymentSection = document.getElementById('payment-section');
-        if (paymentSection) {
-          paymentSection.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 100);
+      // Redirect to Stripe Checkout
+      window.location.href = result.url;
       
     } catch (err) {
       console.error('Error initializing payment:', err);
       setError(`An error occurred while setting up payment: ${err.message}. Please try again or contact support.`);
-    } finally {
       setLoading(false);
     }
   };
   
   const handlePaymentSuccess = async (paymentId) => {
     try {
-      // Save booking data after successful payment
-      const response = await fetch('http://localhost:3001/api/payment-success', {
+      // Save booking data after successful payment - Fix the URL format
+      const response = await fetch(`${API_URL}/api/payment-success`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

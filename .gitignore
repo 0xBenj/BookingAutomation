@@ -13,22 +13,49 @@
 
 # misc
 .DS_Store
-.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env*.local
+
+# Environment files with secrets
+.env
+.env.development
 .env.production
 
-# Specifically exclude server environment variables
-/server/.env
+# Firebase
+/.firebase
+firebase-debug.log
+.firebaserc
+firebase-debug.*.log*
+ui-debug.log
+database-debug.log
+pubsub-debug.log
+firebase-export-*
 
+# IDE/Editor folders
+/.idea
+/.vscode
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
 
-# IDE files
-.idea/
-.vscode/
-*.swp
-*.swo
+# Cache directories
+.npm
+.eslintcache
+.cache
+.parcel-cache
+
+# Misc
+.DS_Store
+Thumbs.db
+.vercel
+.now

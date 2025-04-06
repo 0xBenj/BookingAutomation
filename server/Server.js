@@ -16,11 +16,13 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // Add Stripe
 const sheetsModule = require('./services/sheets');
 const calendarModule = require('./services/calendar');
 const tutorsModule = require('./tutors');
+const mailerModule = require('./services/mailer');
 
 // Verify exports are available
 console.log('Imported sheets module exports:', Object.keys(sheetsModule));
 console.log('Imported calendar module exports:', Object.keys(calendarModule));
 console.log('Imported tutors module exports:', Object.keys(tutorsModule));
+console.log('Imported mailer module exports:', Object.keys(mailerModule));
 
 // Log the path to tutors module to verify it's correct
 console.log('Tutors module path:', path.join(__dirname, '../src/data/tutors'));
@@ -28,14 +30,17 @@ console.log('Tutors module path:', path.join(__dirname, '../src/data/tutors'));
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Add body parser middleware before the routes
+app.use(express.json());
+
 // Middleware
-// Enhance CORS for development
+// Enhance CORS for development - make sure it accepts local connections
 app.use(cors({
-  origin: '*', // For development only - change to specific origin in production
-  methods: ['GET', 'POST'],
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000', // Allow local frontend
+  methods: ['GET', 'POST', 'OPTIONS'],
+  credentials: false,
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
 
 /**
  * Utility function to parse phone numbers and extract only digits
@@ -47,6 +52,9 @@ function parsePhoneNumber(phone) {
   // Remove all non-digit characters
   return phone.replace(/\D/g, '');
 }
+
+// Add a map to track in-progress bookings
+const processingBookings = new Map();
 
 //===================================================================
 // BOOKING API ENDPOINT
@@ -227,6 +235,71 @@ app.post('/api/payment-success', async (req, res) => {
       calendarModule.createCalendarEvent(completeBookingData)
     ]);
     
+    // Send confirmation email to student
+    try {
+      // Check if the mailer module has the required function
+      if (bookingData.email && typeof mailerModule.sendStudentBookingConfirmation === 'function') {
+        console.log('Using mailer module to send confirmation email to student');
+        await mailerModule.sendStudentBookingConfirmation(
+          bookingData.email,
+          completeBookingData,
+          calendarResult
+        );
+        
+        console.log(`Confirmation email sent to student: ${bookingData.email}`);
+      } else {
+        // Fallback to direct email if module function is not available
+        console.log('Mailer module function not available. Using fallback method...');
+        console.log('Available mailer functions:', Object.keys(mailerModule));
+        
+        // Create a one-time transporter
+        const transporter = nodemailer.createTransport({
+          service: process.env.EMAIL_SERVICE,
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASSWORD
+          }
+        });
+
+        // Format date and time
+        const startDateTime = new Date(calendarResult.start.dateTime);
+        const formattedDate = startDateTime.toLocaleDateString('en-GB', {
+          weekday: 'long',
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric',
+          timeZone: 'Europe/Madrid'
+        });
+        const formattedTime = startDateTime.toLocaleTimeString('en-GB', {
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: 'Europe/Madrid'
+        });
+
+        // Send basic confirmation email
+        await transporter.sendMail({
+          from: `"Tutorly Booking" <${process.env.EMAIL_USER}>`,
+          to: bookingData.email,
+          subject: `Booking Confirmation: ${bookingData.subjectCategory} Tutoring Session`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd;">
+              <h2>Thank You for Your Booking</h2>
+              <p>Dear ${bookingData.firstName},</p>
+              <p>Your tutoring session has been confirmed for ${formattedDate} at ${formattedTime}.</p>
+              <p>Subject: ${bookingData.subjectCategory}</p>
+              <p>Duration: ${bookingData.classDuration}</p>
+              <p>A tutor will contact you shortly.</p>
+            </div>
+          `
+        });
+        
+        console.log(`Fallback confirmation email sent to student: ${bookingData.email}`);
+      }
+    } catch (emailError) {
+      console.error('Error sending student confirmation email:', emailError);
+      // Continue even if email fails - we don't want to fail the booking
+    }
+    
     // Return success response
     res.status(200).json({
       success: true,
@@ -244,6 +317,529 @@ app.post('/api/payment-success', async (req, res) => {
     });
   }
 });
+
+//===================================================================
+// STRIPE PAYMENT ENDPOINTS
+// Handles creating checkout sessions and processing payments
+//===================================================================
+
+app.post('/api/create-checkout-session', async (req, res) => {
+  try {
+    console.log('Received checkout session request:', req.body);
+    const { amount, bookingData, customerEmail } = req.body;
+    
+    if (!amount) {
+      throw new Error('Amount is required');
+    }
+    
+    // Validate booking is at least 24 hours in advance
+    if (bookingData.preferredDate && bookingData.preferredTime) {
+      const selectedDateTime = new Date(
+        `${bookingData.preferredDate}T${bookingData.preferredTime}:00`
+      );
+      
+      // Calculate 24 hours from now
+      const minDateTime = new Date();
+      minDateTime.setHours(minDateTime.getHours() + 24);
+      
+      if (selectedDateTime < minDateTime) {
+        throw new Error('Bookings must be made at least 24 hours in advance');
+      }
+    }
+    
+    // Store booking data in metadata for retrieval later
+    const compressedBookingData = {
+      name: `${bookingData.firstName} ${bookingData.lastName}`,
+      email: bookingData.email,
+      phone: parsePhoneNumber(bookingData.phone),
+      subject: bookingData.subjectCategory,
+      classDetails: `${bookingData.classFormat} - ${bookingData.classSize} - ${bookingData.classDuration}`,
+      dateTime: `${bookingData.preferredDate} at ${bookingData.preferredTime}`,
+      tutor: bookingData.tutorPreference
+    };
+
+    // Get the domain for success and cancel URLs
+    const domain = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+    // Create a Stripe Checkout Session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'eur',
+            product_data: {
+              name: `${bookingData.classSize} ${bookingData.subjectCategory} Tutoring Session`,
+              description: `${bookingData.classDuration} on ${bookingData.preferredDate} at ${bookingData.preferredTime}`,
+            },
+            unit_amount: Math.round(parseFloat(amount) * 100), // Convert to cents
+          },
+          quantity: 1,
+        },
+      ],
+      customer_email: customerEmail,
+      metadata: {
+        bookingInfo: JSON.stringify(compressedBookingData),
+        bookingSource: 'tutorly-online-form'
+      },
+      mode: 'payment',
+      success_url: `${domain}/booking-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${domain}/booking-form`,
+    });
+
+    console.log('Checkout session created successfully:', session.id);
+    res.status(200).json({
+      url: session.url,
+      sessionId: session.id
+    });
+  } catch (error) {
+    console.error('Error creating checkout session:', error.message);
+    console.error('Error type:', error.type);
+    if (error.raw) {
+      console.error('Stripe error details:', error.raw);
+    }
+    res.status(500).json({ 
+      error: error.message,
+      type: error.type || 'unknown'
+    });
+  }
+});
+
+// This line should be BEFORE any other routes or middleware that parses JSON
+app.post('/api/webhook', express.raw({type: 'application/json'}), async (req, res) => {
+  const signature = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    
+    // Log the webhook request for debugging
+    console.log('Received webhook:', {
+      headers: req.headers['stripe-signature'] ? 'Signature present' : 'No signature',
+      bodyLength: req.body ? req.body.length : 0
+    });
+    
+    // Verify the webhook signature
+    if (!webhookSecret) {
+      console.error('STRIPE_WEBHOOK_SECRET is not configured');
+      return res.status(500).send('Webhook secret not configured');
+    }
+    
+    event = stripe.webhooks.constructEvent(req.body, signature, webhookSecret);
+    console.log('Webhook event type:', event.type);
+    
+  } catch (err) {
+    console.error(`Webhook Error: ${err.message}`);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle specific event types
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    console.log('Processing checkout.session.completed event:', session.id);
+    
+    try {
+      // Create a unique process ID for this session
+      const processId = `webhook_${session.id}`;
+      
+      // Check if this session is already being processed
+      if (processingBookings.has(processId)) {
+        console.log('Session already being processed in webhook, preventing duplicate processing');
+        return res.status(200).json({received: true, message: 'Already processing'});
+      }
+      
+      // Set processing lock
+      processingBookings.set(processId, new Date().toISOString());
+      
+      // Check if this session has already been processed
+      if (session.metadata?.processed === 'true') {
+        processingBookings.delete(processId); // Release lock
+        console.log('Session already processed in webhook, skipping duplicate processing');
+        return res.status(200).json({received: true, message: 'Already processed'});
+      }
+      
+      // Get the booking data from session metadata
+      if (!session.metadata || !session.metadata.bookingInfo) {
+        console.error('No booking info found in session metadata');
+        return res.status(200).json({received: true, warning: 'No booking data found'});
+      }
+      
+      // Mark session as being processed to prevent duplicates
+      await stripe.checkout.sessions.update(session.id, {
+        metadata: {
+          ...session.metadata,
+          processed: 'true',
+          processedBy: 'webhook',
+          processedTimestamp: new Date().toISOString()
+        }
+      });
+      
+      const bookingInfo = JSON.parse(session.metadata.bookingInfo);
+      
+      // Create a complete booking data object
+      const completeBookingData = {
+        firstName: bookingInfo.name.split(' ')[0],
+        lastName: bookingInfo.name.split(' ').slice(1).join(' '),
+        email: bookingInfo.email || session.customer_email,
+        phone: bookingInfo.phone,
+        subjectCategory: bookingInfo.subject,
+        classFormat: bookingInfo.classDetails.split(' - ')[0],
+        classSize: bookingInfo.classDetails.split(' - ')[1],
+        classDuration: bookingInfo.classDetails.split(' - ')[2],
+        preferredDate: bookingInfo.dateTime.split(' at ')[0],
+        preferredTime: bookingInfo.dateTime.split(' at ')[1],
+        tutorPreference: bookingInfo.tutor,
+        paymentId: session.payment_intent,
+        paymentStatus: 'Paid',
+        status: 'Confirmed',
+        timestamp: new Date().toISOString(),
+      };
+      
+      // Single log for booking data (removed redundant log)
+      console.log('Processing webhook booking:', {
+        name: `${completeBookingData.firstName} ${completeBookingData.lastName}`,
+        email: completeBookingData.email,
+        subject: completeBookingData.subjectCategory
+      });
+      
+      // Save to sheets and calendar with better error handling
+      try {
+        // Verify modules exist before calling them
+        if (typeof sheetsModule.addBooking !== 'function') {
+          throw new Error('sheetsModule.addBooking is not a function');
+        }
+        
+        if (typeof calendarModule.createCalendarEvent !== 'function') {
+          throw new Error('calendarModule.createCalendarEvent is not a function');
+        }
+        
+        // Run operations sequentially for better error handling
+        const sheetResult = await sheetsModule.addBooking(completeBookingData);
+        console.log('Booking saved to sheet:', sheetResult ? 'Success' : 'Failed');
+        
+        const calendarResult = await calendarModule.createCalendarEvent(completeBookingData);
+        console.log('Calendar event created:', calendarResult.id || 'Failed');
+        
+        // Send confirmation email to student
+        if (typeof mailerModule.sendStudentBookingConfirmation === 'function') {
+          console.log('Sending confirmation email to:', completeBookingData.email);
+          await mailerModule.sendStudentBookingConfirmation(
+            completeBookingData.email,
+            completeBookingData,
+            calendarResult
+          );
+          console.log('Confirmation email sent successfully');
+        } else {
+          console.error('mailerModule.sendStudentBookingConfirmation is not a function');
+          // Send a fallback email
+          await sendFallbackConfirmationEmail(completeBookingData, calendarResult);
+        }
+        
+        console.log('Webhook booking processing completed successfully');
+      } catch (processingError) {
+        console.error('Error processing booking after checkout:', processingError);
+        // Send admin alert email about processing failure
+        sendAdminAlertEmail('Booking Processing Error', processingError, completeBookingData);
+      }
+      
+      // Release the lock when done
+      processingBookings.delete(processId);
+    } catch (parseError) {
+      // Release any lock if error occurs
+      if (session && session.id) {
+        processingBookings.delete(`webhook_${session.id}`);
+      }
+      console.error('Error parsing booking data from session:', parseError);
+      sendAdminAlertEmail('Webhook Parsing Error', parseError, session);
+    }
+  }
+
+  // Always return a 200 response to acknowledge receipt of the webhook
+  res.status(200).json({received: true});
+});
+
+/**
+ * Send a fallback confirmation email when the mailer module function is unavailable
+ * @param {Object} bookingData - Complete booking data
+ * @param {Object} calendarResult - Calendar event data
+ */
+async function sendFallbackConfirmationEmail(bookingData, calendarResult) {
+  try {
+    // Create a one-time transporter
+    const transporter = nodemailer.createTransport({
+      service: process.env.EMAIL_SERVICE,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD
+      }
+    });
+
+    // Format date and time - explicitly use Spanish timezone
+    const startDateTime = new Date(calendarResult.start.dateTime);
+    
+    const formattedDate = startDateTime.toLocaleDateString('en-GB', {
+      weekday: 'long',
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      timeZone: 'Europe/Madrid'
+    });
+    
+    const formattedTime = startDateTime.toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Madrid'
+    });
+
+    // Send basic confirmation email
+    await transporter.sendMail({
+      from: `"Tutorly Booking" <${process.env.EMAIL_USER}>`,
+      to: bookingData.email,
+      subject: `Booking Confirmation: ${bookingData.subjectCategory} Tutoring Session`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd;">
+          <h2>Thank You for Your Booking</h2>
+          <p>Dear ${bookingData.firstName},</p>
+          <p>Your tutoring session has been confirmed for ${formattedDate} at ${formattedTime} (Spanish Time).</p>
+          <p>Subject: ${bookingData.subjectCategory}</p>
+          <p>Duration: ${bookingData.classDuration}</p>
+          <p>A tutor will contact you shortly.</p>
+          <p>Payment has been confirmed. Your session is now reserved.</p>
+        </div>
+      `
+    });
+    
+    console.log(`Fallback confirmation email sent to student: ${bookingData.email}`);
+  } catch (emailError) {
+    console.error('Error sending fallback confirmation email:', emailError);
+  }
+}
+
+/**
+ * Send alert to admin when errors occur in the webhook processing
+ * @param {string} subject - Email subject
+ * @param {Error} error - Error object
+ * @param {Object} data - Related data for debugging
+ */
+async function sendAdminAlertEmail(subject, error, data) {
+  try {
+    // Create a one-time transporter
+    const transporter = nodemailer.createTransport({
+      service: process.env.EMAIL_SERVICE,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD
+      }
+    });
+    
+    // Send alert email
+    await transporter.sendMail({
+      from: `"Tutorly System" <${process.env.EMAIL_USER}>`,
+      to: process.env.ADMIN_EMAIL || process.env.EMAIL_USER,
+      subject: `ALERT: ${subject}`,
+      html: `
+        <div style="font-family: monospace; max-width: 800px; margin: 0 auto; padding: 20px; border: 1px solid #ff0000; background-color: #fff8f8;">
+          <h2 style="color: #cc0000;">${subject}</h2>
+          <p><strong>Time:</strong> ${new Date().toISOString()}</p>
+          <p><strong>Error:</strong> ${error.message}</p>
+          <p><strong>Stack:</strong></p>
+          <pre>${error.stack}</pre>
+          <p><strong>Related Data:</strong></p>
+          <pre>${JSON.stringify(data, null, 2)}</pre>
+        </div>
+      `
+    });
+    
+    console.log(`Admin alert email sent: ${subject}`);
+  } catch (emailError) {
+    console.error('Error sending admin alert email:', emailError);
+  }
+}
+
+// Remove duplicate verify-session endpoint and keep only this one
+app.get('/api/verify-session', async (req, res) => {
+  try {
+    const sessionId = req.query.session_id;
+    
+    if (!sessionId) {
+      return res.status(400).json({ success: false, error: 'Session ID is required' });
+    }
+    
+    console.log('Verifying session:', sessionId);
+    
+    // Retrieve the checkout session
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    
+    if (!session) {
+      return res.status(404).json({ success: false, error: 'Session not found' });
+    }
+    
+    console.log('Session verification result:', {
+      id: session.id,
+      status: session.status,
+      payment_status: session.payment_status
+    });
+    
+    return res.status(200).json({ 
+      success: true, 
+      paid: session.payment_status === 'paid',
+      status: session.status,
+      customer: session.customer_email,
+      hasMetadata: !!session.metadata?.bookingInfo,
+      // Add flag to check if this session has already been processed
+      alreadyProcessed: session.metadata?.processed === 'true'
+    });
+  } catch (error) {
+    console.error('Error verifying session:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Add an endpoint to explicitly process a booking from the success page
+app.post('/api/process-checkout-booking', async (req, res) => {
+  try {
+    const { sessionId, bookingData } = req.body;
+    
+    if (!sessionId) {
+      return res.status(400).json({ success: false, error: 'Session ID is required' });
+    }
+    
+    if (!bookingData) {
+      return res.status(400).json({ success: false, error: 'Booking data is required' });
+    }
+    
+    // Check if this session is already being processed (use a unique identifier)
+    const processId = `checkout_${sessionId}`;
+    if (processingBookings.has(processId)) {
+      console.log(`Session ${sessionId} is already being processed, preventing duplicate processing`);
+      return res.status(200).json({
+        success: true,
+        message: 'This booking is currently being processed',
+        alreadyProcessed: true
+      });
+    }
+    
+    // Mark this session as being processed
+    processingBookings.set(processId, new Date().toISOString());
+    
+    console.log('Processing booking for session:', sessionId);
+    
+    // Verify the session exists and was paid
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    
+    if (!session) {
+      processingBookings.delete(processId); // Release lock
+      return res.status(404).json({ success: false, error: 'Session not found' });
+    }
+    
+    if (session.payment_status !== 'paid') {
+      processingBookings.delete(processId); // Release lock
+      return res.status(400).json({ 
+        success: false, 
+        error: `Payment not completed. Current status: ${session.payment_status}` 
+      });
+    }
+    
+    // Check if this session has already been processed (prevent duplicates)
+    if (session.metadata?.processed === 'true') {
+      processingBookings.delete(processId); // Release lock
+      console.log('Session already processed, skipping duplicate processing');
+      return res.status(200).json({
+        success: true,
+        message: 'Booking was already processed successfully',
+        alreadyProcessed: true
+      });
+    }
+    
+    // Create a complete booking data object with payment details
+    const completeBookingData = {
+      ...bookingData,
+      paymentId: session.payment_intent,
+      paymentStatus: 'Paid',
+      status: 'Confirmed',
+      timestamp: new Date().toISOString(),
+    };
+    
+    // Only log once with essential booking info
+    console.log('Processing booking:', {
+      name: `${completeBookingData.firstName} ${completeBookingData.lastName}`,
+      email: completeBookingData.email,
+      subject: completeBookingData.subjectCategory,
+      date: completeBookingData.preferredDate,
+      time: completeBookingData.preferredTime
+    });
+    
+    // Verify modules exist before calling them
+    if (typeof sheetsModule.addBooking !== 'function') {
+      processingBookings.delete(processId); // Release lock
+      throw new Error('sheetsModule.addBooking is not a function');
+    }
+    
+    if (typeof calendarModule.createCalendarEvent !== 'function') {
+      processingBookings.delete(processId); // Release lock
+      throw new Error('calendarModule.createCalendarEvent is not a function');
+    }
+    
+    // Save to Google Sheets - just log success/failure, not "Saving booking to sheets and calendar..."
+    const sheetResult = await sheetsModule.addBooking(completeBookingData);
+    console.log('Booking saved to sheet:', sheetResult ? 'Success' : 'Failed');
+    
+    // Create Calendar event
+    const calendarResult = await calendarModule.createCalendarEvent(completeBookingData);
+    console.log('Calendar event created:', calendarResult.id || 'Failed');
+    
+    // Mark the session as processed to prevent duplicates
+    await stripe.checkout.sessions.update(sessionId, {
+      metadata: {
+        ...session.metadata,
+        processed: 'true',
+        processedTimestamp: new Date().toISOString()
+      }
+    });
+    
+    // Send confirmation email to student
+    try {
+      if (typeof mailerModule.sendStudentBookingConfirmation === 'function') {
+        console.log('Sending confirmation email to:', completeBookingData.email);
+        await mailerModule.sendStudentBookingConfirmation(
+          completeBookingData.email,
+          completeBookingData,
+          calendarResult
+        );
+        console.log('Confirmation email sent successfully');
+      } else {
+        console.error('mailerModule.sendStudentBookingConfirmation is not a function');
+        // Send a fallback email
+        await sendFallbackConfirmationEmail(completeBookingData, calendarResult);
+      }
+    } catch (emailError) {
+      console.error('Error sending student confirmation email:', emailError);
+    }
+    
+    // Release the lock
+    processingBookings.delete(processId);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Booking processed successfully',
+      data: {
+        sheetId: sheetResult,
+        calendarId: calendarResult.id
+      }
+    });
+    
+  } catch (error) {
+    // Make sure to release the lock even if there's an error
+    if (req.body && req.body.sessionId) {
+      processingBookings.delete(`checkout_${req.body.sessionId}`);
+    }
+    console.error('Error processing booking from success page:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Then AFTER the webhook route, add the JSON parser middleware for all other routes
+app.use(express.json());
 
 //===================================================================
 // HEALTH CHECK ENDPOINT
@@ -397,12 +993,18 @@ async function processEvent(event, calendarId, calendar, calendarName) {
       const tutorEmail = tutor.email;
       const tutorName = tutorEmail.split('@')[0].replace(/[.]/g, ' ');
       
+      // Extract student name from summary if it contains "for [name]"
+      let studentName = "";
+      if (event.summary.includes(" for ")) {
+        studentName = event.summary.split(" for ")[1].trim();
+      }
+      
       // Get student info from extended properties (private data)
       let studentInfo = {}; // Changed from const to let
       
       if (event.extendedProperties && event.extendedProperties.private) {
         const privateProps = event.extendedProperties.private;
-        studentInfo.name = privateProps.studentName;
+        studentInfo.name = privateProps.studentName || studentName;
         studentInfo.email = privateProps.studentEmail;
         studentInfo.phone = privateProps.studentPhone;
         studentInfo.format = privateProps.format;
@@ -412,14 +1014,29 @@ async function processEvent(event, calendarId, calendar, calendarName) {
       } else {
         // Fallback to parsing from description if extended properties aren't available
         studentInfo = parseEventDescription(event.description);
+        if (studentName && !studentInfo.name) {
+          studentInfo.name = studentName;
+        }
       }
+      
+      // Keep the student name in the updated event summary
+      let updatedSummary = `ASSIGNED - ${tutorName}`;
+      
+      // Extract the subject and class size part (everything after "UNASSIGNED - " and before " for ")
+      let subjectPart = event.summary.substring("UNASSIGNED - ".length);
+      if (subjectPart.includes(" for ")) {
+        subjectPart = subjectPart.split(" for ")[0];
+      }
+      
+      // Create the full updated summary
+      updatedSummary = `${updatedSummary} ${subjectPart} for ${studentInfo.name || studentName}`;
       
       // Update the event
       const updatedEvent = await calendar.events.patch({
         calendarId: calendarId,
         eventId: eventId,
         resource: {
-          summary: event.summary.replace('UNASSIGNED', `ASSIGNED - ${tutorName}`),
+          summary: updatedSummary,
           colorId: '10', // Green for assigned
           // Prevent others from modifying
           guestsCanInviteOthers: false
@@ -486,18 +1103,41 @@ function parseEventDescription(description) {
  */
 async function sendTutorAssignmentEmail(tutorEmail, event, studentInfo) {
   try {
-    // Format date and time
+    // First check if the mailer module has this function
+    if (typeof mailerModule.sendTutorConfirmation === 'function') {
+      // The mailer module already has most of the functionality we need
+      const mockBookingData = {
+        firstName: studentInfo.name ? studentInfo.name.split(' ')[0] : 'Student',
+        lastName: studentInfo.name ? studentInfo.name.split(' ').slice(1).join(' ') : '',
+        email: studentInfo.email || 'Not provided',
+        phone: studentInfo.phone || 'Not provided',
+        classFormat: studentInfo.format || 'Not specified',
+        classSize: studentInfo.size || 'Solo',
+        classDuration: studentInfo.duration || 'Not specified',
+        specificTopic: studentInfo.specificTopic || ''
+      };
+      
+      return await mailerModule.sendTutorConfirmation(tutorEmail, mockBookingData, event);
+    }
+    
+    // If not available, use direct implementation (fallback)
+    // Format date and time - ensure Spain timezone
     const startDateTime = new Date(event.start.dateTime);
-    const formattedDate = startDateTime.toLocaleDateString('en-GB', {
+    const options = {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
-    });
-    const formattedTime = startDateTime.toLocaleTimeString('en-GB', {
+      day: 'numeric',
+      timeZone: 'Europe/Madrid'
+    };
+    const timeOptions = {
       hour: '2-digit',
-      minute: '2-digit'
-    });
+      minute: '2-digit',
+      timeZone: 'Europe/Madrid'
+    };
+    
+    const formattedDate = startDateTime.toLocaleDateString('en-GB', options);
+    const formattedTime = startDateTime.toLocaleTimeString('en-GB', timeOptions);
     
     // Extract subject from event summary
     const summaryParts = event.summary.split(' ');
@@ -514,15 +1154,15 @@ async function sendTutorAssignmentEmail(tutorEmail, event, studentInfo) {
     // Join the remaining parts to get the full subject
     const subject = summaryParts.slice(subjectIndex).join(' ').replace('Tutoring Session', '').trim();
     
-    // Get the mailer module's transporter
-    // If you're using a separate mailer module, you could use that instead
+    // Create a one-time transporter
     const transporter = nodemailer.createTransport({
-        service: process.env.EMAIL_SERVICE,
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASSWORD
-        }
-      });
+      service: process.env.EMAIL_SERVICE,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD
+      }
+    });
+    
     // Create email options
     const mailOptions = {
       from: '"Tutorly Booking" <tutorlyautomation@gmail.com>',
@@ -535,7 +1175,7 @@ async function sendTutorAssignmentEmail(tutorEmail, event, studentInfo) {
           <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
             <p style="margin: 5px 0;"><strong>Subject:</strong> ${subject}</p>
             <p style="margin: 5px 0;"><strong>Date:</strong> ${formattedDate}</p>
-            <p style="margin: 5px 0;"><strong>Time:</strong> ${formattedTime}</p>
+            <p style="margin: 5px 0;"><strong>Time:</strong> ${formattedTime} (Spanish Time)</p>
             <p style="margin: 5px 0;"><strong>Format:</strong> ${studentInfo.format || 'N/A'}</p>
             <p style="margin: 5px 0;"><strong>Size:</strong> ${studentInfo.size || classSize}</p>
             <p style="margin: 5px 0;"><strong>Duration:</strong> ${studentInfo.duration || 'N/A'}</p>
@@ -573,6 +1213,21 @@ async function sendTutorAssignmentEmail(tutorEmail, event, studentInfo) {
 
 // Start the calendar monitoring when server loads
 startCalendarMonitoring();
+
+// Add a cleanup function to remove stale locks
+setInterval(() => {
+  // Remove any processing locks older than 5 minutes
+  const now = new Date().getTime();
+  const fiveMinutesAgo = now - (5 * 60 * 1000);
+  
+  processingBookings.forEach((timestamp, key) => {
+    const lockTime = new Date(timestamp).getTime();
+    if (lockTime < fiveMinutesAgo) {
+      console.log(`Cleaning up stale processing lock for: ${key}`);
+      processingBookings.delete(key);
+    }
+  });
+}, 60 * 1000); // Check every minute
 
 //===================================================================
 // SERVER INITIALIZATION
