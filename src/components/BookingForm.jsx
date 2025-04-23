@@ -420,6 +420,7 @@ const BookingForm = () => {
       const { totalPrice } = calculatePrice(formData.classSize, formData.classDuration);
       
       console.log("Creating checkout session for amount:", totalPrice.toFixed(2));
+      console.log("API URL being used:", API_URL);
       
       // Create a checkout session instead of a payment intent
       const response = await fetch(`${API_URL}/api/create-checkout-session`, {
@@ -434,6 +435,14 @@ const BookingForm = () => {
           frontendUrl: FRONTEND_URL // Pass the frontend URL to the server
         })
       });
+      
+      // Check if the response is JSON
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        console.error("Server returned non-JSON response:", text);
+        throw new Error(`Server returned non-JSON response. Server might be down or misconfigured.`);
+      }
       
       const result = await response.json();
       console.log("Checkout session response:", result);
@@ -450,7 +459,7 @@ const BookingForm = () => {
       
     } catch (err) {
       console.error('Error initializing payment:', err);
-      setError(`An error occurred while setting up payment: ${err.message}. Please try again or contact support.`);
+      setError(`An error occurred while setting up payment: ${err.message}. Please try again or contact support at tutorlynow@gmail.com.`);
       setLoading(false);
     }
   };

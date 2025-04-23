@@ -248,6 +248,91 @@ app.post('/api/payment-success', async (req, res) => {
   }
 });
 
+// Check if the checkout session endpoint exists and is properly defined
+app.post('/api/create-checkout-session', async (req, res) => {
+  try {
+    console.log('Received checkout session request:', req.body);
+    const { amount, bookingData, customerEmail, frontendUrl } = req.body;
+    
+    if (!amount) {
+      throw new Error('Amount is required');
+    }
+    
+    // Validate booking is at least 24 hours in advance
+    if (bookingData.preferredDate && bookingData.preferredTime) {
+      const selectedDateTime = new Date(
+        `${bookingData.preferredDate}T${bookingData.preferredTime}:00`
+      );
+      
+      // Calculate 24 hours from now
+      const minDateTime = new Date();
+      minDateTime.setHours(minDateTime.getHours() + 24);
+      
+      if (selectedDateTime < minDateTime) {
+        throw new Error('Bookings must be made at least 24 hours in advance');
+      }
+    }
+    
+    // Store booking data in metadata for retrieval later
+    const compressedBookingData = {
+      name: `${bookingData.firstName} ${bookingData.lastName}`,
+      email: bookingData.email,
+      phone: parsePhoneNumber(bookingData.phone),
+      subject: bookingData.subjectCategory,
+      classDetails: `${bookingData.classFormat} - ${bookingData.classSize} - ${bookingData.classDuration}`,
+      dateTime: `${bookingData.preferredDate} at ${bookingData.preferredTime}`,
+      tutor: bookingData.tutorPreference
+    };
+
+    // Get the domain for success and cancel URLs
+    const domain = frontendUrl || process.env.FRONTEND_URL || 'https://tutorly-booking.web.app';
+
+    console.log(`Creating checkout session for ${amount}€, redirecting to ${domain}`);
+
+    // Create a Stripe Checkout Session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'eur',
+            product_data: {
+              name: `${bookingData.classSize} ${bookingData.subjectCategory} Tutoring Session`,
+              description: `${bookingData.classDuration} on ${bookingData.preferredDate} at ${bookingData.preferredTime}`,
+            },
+            unit_amount: Math.round(parseFloat(amount) * 100), // Convert to cents
+          },
+          quantity: 1,
+        },
+      ],
+      customer_email: customerEmail,
+      metadata: {
+        bookingInfo: JSON.stringify(compressedBookingData),
+        bookingSource: 'tutorly-online-form'
+      },
+      mode: 'payment',
+      success_url: `${domain}/booking-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${domain}/booking-form`,
+    });
+
+    console.log('Checkout session created successfully:', session.id);
+    res.status(200).json({
+      url: session.url,
+      sessionId: session.id
+    });
+  } catch (error) {
+    console.error('Error creating checkout session:', error.message);
+    console.error('Error type:', error.type);
+    if (error.raw) {
+      console.error('Stripe error details:', error.raw);
+    }
+    res.status(500).json({ 
+      error: error.message,
+      type: error.type || 'unknown'
+    });
+  }
+});
+
 //===================================================================
 // HEALTH CHECK ENDPOINT
 // Simple endpoint to verify server and modules are running correctly
