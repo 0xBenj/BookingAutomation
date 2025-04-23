@@ -222,7 +222,98 @@ async function sendTutorConfirmation(tutorEmail, bookingData, eventData) {
   }
 }
 
+/**
+ * Send confirmation email to student when a tutor claims their session
+ * 
+ * This function notifies the student that a tutor has claimed their 
+ * tutoring session and provides the tutor's contact information.
+ * 
+ * @param {string} studentEmail - Student's email address
+ * @param {string} studentName - Student's name
+ * @param {string} tutorName - Tutor's name
+ * @param {string} tutorEmail - Tutor's email address
+ * @param {Object} bookingData - Booking information
+ * @param {Object} eventData - Google Calendar event information
+ * @returns {Promise} - Result of sending email
+ */
+async function sendStudentTutorConfirmation(studentEmail, studentName, tutorName, tutorEmail, bookingData, eventData) {
+  try {
+    // Initialize transporter if not already done
+    initializeTransporter();
+    
+    if (!transporter) {
+      console.error('Email transporter not initialized');
+      return false;
+    }
+
+    // Format date and time
+    const startDateTime = new Date(eventData.start.dateTime);
+    const formattedDate = startDateTime.toLocaleDateString('en-GB', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const formattedTime = startDateTime.toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    // Get subject from event summary
+    const summaryParts = eventData.summary.split(' ');
+    let subjectIndex = 2; // Default position
+    if (summaryParts[0].includes("ASSIGNED")) {
+      // If assigned, there will be the tutor name too, so subject starts later
+      subjectIndex = 3;
+    }
+    
+    // Join the remaining parts to get the full subject
+    const subject = summaryParts.slice(subjectIndex).join(' ').replace('Tutoring Session', '').trim();
+
+    // Create email options for student confirmation
+    const mailOptions = {
+      from: `"Tutorly Booking" <${process.env.EMAIL_USER}>`,
+      to: studentEmail,
+      subject: `Tutor confirmed for your ${subject} session`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+          <h2 style="color: #4a5568; text-align: center; margin-bottom: 20px;">Your Tutor Has Been Confirmed</h2>
+          
+          <p style="margin-bottom: 20px;">Hi ${studentName},</p>
+          
+          <p style="margin-bottom: 20px;">Good news! Your tutoring session has been claimed by a tutor. <strong>${tutorName}</strong> (${tutorEmail}) will contact you shortly to discuss details about your upcoming session.</p>
+          
+          <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+            <p style="margin: 5px 0;"><strong>Subject:</strong> ${subject}</p>
+            <p style="margin: 5px 0;"><strong>Date:</strong> ${formattedDate}</p>
+            <p style="margin: 5px 0;"><strong>Time:</strong> ${formattedTime}</p>
+          </div>
+          
+          <p style="margin-bottom: 15px;">If you have any questions before hearing from your tutor, please feel free to respond to this email.</p>
+          
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="${eventData.htmlLink}" style="background-color: #4285f4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">View in Calendar</a>
+          </div>
+          
+          <p style="margin-top: 30px; font-size: 12px; color: #666; text-align: center;">
+            This is an automated message from Tutorly. Please do not reply to this email.
+          </p>
+        </div>
+      `
+    };
+
+    // Send email
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Confirmation email sent to student:', info.messageId);
+    return true;
+  } catch (error) {
+    console.error('Error sending student confirmation:', error);
+    return false;
+  }
+}
+
 module.exports = {
   sendTutorNotifications,
-  sendTutorConfirmation
+  sendTutorConfirmation,
+  sendStudentTutorConfirmation
 };

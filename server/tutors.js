@@ -1,6 +1,8 @@
 // Define tutor data per specific subject
 const tutorsBySubject = {
   "Applied Mathematics for Management": [
+    // Tutorly email
+    { email: "tutorlynow@gmail.com", name: "Tutorly" },
     { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
     { email: "albertomilone8@gmail.com", name: "Alberto Milone" },
     { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasilijevic" },
@@ -14,6 +16,8 @@ const tutorsBySubject = {
     { email: "gregoireduplessis7@gmail.com", name: "Grégoire du Plessis" }
   ],
   "Descriptive Statistics and Probability": [
+    // Tutorly email
+    { email: "tutorlynow@gmail.com", name: "Tutorly" },
     { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
     { email: "albertomilone8@gmail.com", name: "Alberto Milone" },
     { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
@@ -30,6 +34,8 @@ const tutorsBySubject = {
     { email: "gabriella.mccann@icloud.com", name: "Gabriella McCann" }
   ],
   "Statistical Inference and Data Analysis": [
+    // Tutorly email
+    { email: "tutorlynow@gmail.com", name: "Tutorly" },
     { email: "albertomilone8@gmail.com", name: "Alberto Milone" },
     { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
     { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasilijevic" },
@@ -39,6 +45,9 @@ const tutorsBySubject = {
     { email: "marco.morchio0505@gmail.com", name: "Marco Morchio" }
   ],
   "Basics of Financial Accounting": [
+    // Tutorly email
+    { email: "tutorlynow@gmail.com", name: "Tutorly" },
+
     { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
     { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
     { email: "F.gesinski@gmail.com", name: "Filippa Gesinski" },
@@ -57,6 +66,9 @@ const tutorsBySubject = {
     { email: "jansalvariba@gmail.com", name: "Jan Salvador" }
   ],
   "Advanced Accounting": [
+    // Tutorly email
+    { email: "tutorlynow@gmail.com", name: "Tutorly" },
+    
     { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
     { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
     { email: "nikosmichail.apostolakis@alumni.esade.edu", name: "Niko Apostolakis" },
@@ -73,6 +85,9 @@ const tutorsBySubject = {
     { email: "flavia.santi@alumni.esade.edu", name: "Flavia Santi" }
   ],
   "Microeconomics": [
+    // Tutorly email
+    { email: "tutorlynow@gmail.com", name: "Tutorly" },
+
     { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
     { email: "nourbishouty@gmail.com", name: "Nour Bishouty" },
     { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
@@ -90,6 +105,9 @@ const tutorsBySubject = {
     { email: "josepcubedo2005@gmail.com", name: "Josep Cubedo" }
   ],
   "Macroeconomics": [
+    // Tutorly email
+    { email: "tutorlynow@gmail.com", name: "Tutorly" },
+
     { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
     { email: "nourbishouty@gmail.com", name: "Nour Bishouty" },
     { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
@@ -110,17 +128,26 @@ const tutorsBySubject = {
     { email: "simon.bahno@gmail.com", name: "Simon Bahno" }
   ],
   "Business Law": [
+    // Tutorly email
+    { email: "tutorlynow@gmail.com", name: "Tutorly" },
+
+    // Testing
     { email: "temp2@jcnorris.com", name: "Norris" },
     { email: "benben113el@gmail.com", name: "Beni" },
-    // { email: "federico.martino21@gmail.com", name: "Federico Martino" },
-    // { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
-    // { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
-    // { email: "giorgio.goretti05@gmail.com", name: "Giorgio Goretti" },
-    // { email: "giuseppeleonardo.mazza@alumni.esade.edu", name: "Giuseppe Mazza" },
-    // { email: "Achille.zerbib@gmail.com", name: "Achille Zerbib" },
-    // { email: "helena.durban@alumni.esade.edu", name: "Helena Durban" }
+
+
+    { email: "federico.martino21@gmail.com", name: "Federico Martino" },
+    { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
+    { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
+    { email: "giorgio.goretti05@gmail.com", name: "Giorgio Goretti" },
+    { email: "giuseppeleonardo.mazza@alumni.esade.edu", name: "Giuseppe Mazza" },
+    { email: "Achille.zerbib@gmail.com", name: "Achille Zerbib" },
+    { email: "helena.durban@alumni.esade.edu", name: "Helena Durban" }
   ],
   "Tax Law": [
+    // Tutorly email
+    { email: "tutorlynow@gmail.com", name: "Tutorly" },
+
     { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
     { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
     { email: "federico.martino21@gmail.com", name: "Federico Martino" },
@@ -131,6 +158,9 @@ const tutorsBySubject = {
     { email: "simon.bahno@gmail.com", name: "Simon Bahno" }
   ],
   "Managing Digital Information": [
+    // Tutorly email
+    { email: "tutorlynow@gmail.com", name: "Tutorly" },
+    
     { email: "mszeni@yahoo.com", name: "Mark Szeni" },
     { email: "nikosmichail.apostolakis@alumni.esade.edu", name: "Niko Apostolakis" },
     { email: "davidmontanepuig@gmail.com", name: "David Montané" },
@@ -143,6 +173,9 @@ const tutorsBySubject = {
     { email: "marco.morchio0505@gmail.com", name: "Marco Morchio" }
   ],
   "Managerial Economics": [
+    // Tutorly email
+    { email: "tutorlynow@gmail.com", name: "Tutorly" },
+
     { email: "Achille.zerbib@gmail.com", name: "Achille Zerbib" },
     { email: "giorgio.goretti05@gmail.com", name: "Giorgio Goretti" },
     { email: "federico.martino21@gmail.com", name: "Federico Martino" },
@@ -157,6 +190,9 @@ const tutorsBySubject = {
     { email: "simon.bahno@gmail.com", name: "Simon Bahno" }
   ],
   "Financial Analysis": [
+    // Tutorly email
+    { email: "tutorlynow@gmail.com", name: "Tutorly" },
+
     { email: "Achille.zerbib@gmail.com", name: "Achille Zerbib" },
     { email: "giorgio.goretti05@gmail.com", name: "Giorgio Goretti" },
     { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
@@ -169,18 +205,31 @@ const tutorsBySubject = {
     { email: "martintuancarrasco@gmail.com", name: "Martin Carrasco" }
   ],
   "Financial Economics": [
+    // Tutorly email
+    { email: "tutorlynow@gmail.com", name: "Tutorly" },
+
     { email: "alessandroromeo554@gmail.com", name: "Alessandro Romeo" },
     { email: "flavia.santi@alumni.esade.edu", name: "Flavia Santi" }
   ],
   "Spanish": [
-    // { email: "martinkohan81@gmail.com", name: "Martin Kohan" }
+    // Tutorly email
+    { email: "tutorlynow@gmail.com", name: "Tutorly" },
+
+    { email: "martinkohan81@gmail.com", name: "Martin Kohan" },
+
+    // Testing
     { email: "benben113el@gmail.com", name: "Beni" },
   ],
   "English": [
+    // Tutorly email
+    { email: "tutorlynow@gmail.com", name: "Tutorly" },
+    
+    // Testing
     { email: "elishakov77@gmail.com", name: "Benjjj" },
-    // { email: "nourbishouty@gmail.com", name: "Nour Bishouty" },
-    // { email: "giorgio.goretti05@gmail.com", name: "Giorgio Goretti" },
-    // { email: "albertomilone8@gmail.com", name: "Alberto Milone" }
+    
+    { email: "nourbishouty@gmail.com", name: "Nour Bishouty" },
+    { email: "giorgio.goretti05@gmail.com", name: "Giorgio Goretti" },
+    { email: "albertomilone8@gmail.com", name: "Alberto Milone" }
   ],
   "German": [
     { email: "F.gesinski@gmail.com", name: "Filippa Gesinski" },

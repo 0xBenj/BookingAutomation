@@ -16,11 +16,14 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // Add Stripe
 const sheetsModule = require('./services/sheets');
 const calendarModule = require('./services/calendar');
 const tutorsModule = require('./tutors');
+const mailerModule = require('./mailer'); // Import the mailer module
 
 // Verify exports are available
 console.log('Imported sheets module exports:', Object.keys(sheetsModule));
 console.log('Imported calendar module exports:', Object.keys(calendarModule));
 console.log('Imported tutors module exports:', Object.keys(tutorsModule));
+console.log('Imported mailer module exports:', Object.keys(mailerModule));
+
 
 // Log the path to tutors module to verify it's correct
 console.log('Tutors module path:', path.join(__dirname, '../src/data/tutors'));
@@ -428,6 +431,57 @@ async function processEvent(event, calendarId, calendar, calendarName) {
       
       // Send email to tutor with student details
       await sendTutorAssignmentEmail(tutorEmail, event, studentInfo);
+      
+      // Send email to student about tutor assignment
+      if (studentInfo.email) {
+        try {
+          // If we have mailerModule imported properly, use it
+          if (mailerModule && typeof mailerModule.sendStudentTutorConfirmation === 'function') {
+            await mailerModule.sendStudentTutorConfirmation(
+              studentInfo.email,
+              studentInfo.name,
+              tutorName,
+              tutorEmail,
+              studentInfo,
+              event
+            );
+            console.log(`Confirmation email sent to student ${studentInfo.email}`);
+          } else {
+            // Fallback to using the transporter directly
+            const studentMailOptions = {
+              from: '"Tutorly Booking" <tutorlyautomation@gmail.com>',
+              to: studentInfo.email,
+              subject: `Tutor confirmed for your session`,
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+                  <h2 style="color: #4a5568; text-align: center; margin-bottom: 20px;">Your Tutor Has Been Confirmed</h2>
+                  
+                  <p style="margin-bottom: 20px;">Hi ${studentInfo.name || 'there'},</p>
+                  
+                  <p style="margin-bottom: 20px;">Good news! Your tutoring session has been claimed by a tutor. <strong>${tutorName}</strong> (${tutorEmail}) will contact you shortly to discuss details about your upcoming session.</p>
+                  
+                  <div style="text-align: center; margin-top: 30px;">
+                    <a href="${event.htmlLink}" style="background-color: #4285f4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">View in Calendar</a>
+                  </div>
+                </div>
+              `
+            };
+            
+            const transporter = nodemailer.createTransport({
+              service: process.env.EMAIL_SERVICE,
+              auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASSWORD
+              }
+            });
+            
+            await transporter.sendMail(studentMailOptions);
+            console.log(`Fallback confirmation email sent to student ${studentInfo.email}`);
+          }
+        } catch (emailError) {
+          console.error('Error sending email to student:', emailError);
+        }
+      }
       
       console.log(`Event in ${calendarName} calendar assigned to ${tutorEmail}`);
     }
