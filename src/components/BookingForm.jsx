@@ -575,7 +575,7 @@ const BookingForm = () => {
             <p><strong>Class Size:</strong> {formData.classSize}</p>
             <p><strong>Duration:</strong> {formData.classDuration}</p>
           </div>
-          <p className="contact-info">If you have any questions, please contact us at <a href="mailto:info@tutorly.com">info@tutorly.com</a></p>
+          <p className="contact-info">If you have any questions, please contact us at <a href="mailto:tutorlynow@gmail.com">tutorlynow@gmail.com</a></p>
         </div>
       </div>
     );
@@ -964,7 +964,7 @@ const BookingForm = () => {
                   <ErrorIcon />
                   <div>
                     <p>Unable to initialize payment system. Please refresh the page or try again later.</p>
-                    <p>If the problem persists, please contact us at <a href="mailto:info@tutorly.com">info@tutorly.com</a></p>
+                    <p>If the problem persists, please contact us at <a href="mailto:tutorlynow@gmail.com">tutorlynow@gmail.com</a></p>
                     <p><small>Technical Info: Stripe SDK initialization failed</small></p>
                   </div>
                 </div>

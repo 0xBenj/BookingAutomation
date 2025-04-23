@@ -61,24 +61,21 @@ async function sendTutorNotifications(tutorEmails, bookingData, eventData) {
       console.log('No tutors to notify for this subject');
       return false;
     }
-    // Format date and time for readability - ensure Spain timezone
+
+    console.log(`Sending notifications to ${tutorEmails.length} tutors`);
+
+    // Format date and time for readability
     const startDateTime = new Date(bookingData.preferredDate + 'T' + bookingData.preferredTime);
-    // Force timezone to Spain/Madrid
-    const options = {
+    const formattedDate = startDateTime.toLocaleDateString('en-GB', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
-      day: 'numeric',
-      timeZone: 'Europe/Madrid'
-    };
-    const timeOptions = {
+      day: 'numeric'
+    });
+    const formattedTime = startDateTime.toLocaleTimeString('en-GB', {
       hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Europe/Madrid'
-    };
-    
-    const formattedDate = startDateTime.toLocaleDateString('en-GB', options);
-    const formattedTime = startDateTime.toLocaleTimeString('en-GB', timeOptions);
+      minute: '2-digit'
+    });
 
     // Create email options
     const mailOptions = {
@@ -151,23 +148,18 @@ async function sendTutorConfirmation(tutorEmail, bookingData, eventData) {
       return false;
     }
 
-    // Format date and time - ensure Spain timezone
+    // Format date and time
     const startDateTime = new Date(eventData.start.dateTime);
-    const options = {
+    const formattedDate = startDateTime.toLocaleDateString('en-GB', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
-      day: 'numeric',
-      timeZone: 'Europe/Madrid'
-    };
-    const timeOptions = {
+      day: 'numeric'
+    });
+    const formattedTime = startDateTime.toLocaleTimeString('en-GB', {
       hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Europe/Madrid'
-    };
-    
-    const formattedDate = startDateTime.toLocaleDateString('en-GB', options);
-    const formattedTime = startDateTime.toLocaleTimeString('en-GB', timeOptions);
+      minute: '2-digit'
+    });
 
     // Get subject and other details from event summary/data
     const summaryParts = eventData.summary.split(' ');
@@ -231,17 +223,20 @@ async function sendTutorConfirmation(tutorEmail, bookingData, eventData) {
 }
 
 /**
- * Send booking confirmation email to a student
+ * Send confirmation email to student when a tutor claims their session
  * 
- * This function sends a confirmation email to the student after they've
- * booked a tutoring session, confirming receipt and next steps.
+ * This function notifies the student that a tutor has claimed their 
+ * tutoring session and provides the tutor's contact information.
  * 
  * @param {string} studentEmail - Student's email address
+ * @param {string} studentName - Student's name
+ * @param {string} tutorName - Tutor's name
+ * @param {string} tutorEmail - Tutor's email address
  * @param {Object} bookingData - Booking information
  * @param {Object} eventData - Google Calendar event information
  * @returns {Promise} - Result of sending email
  */
-async function sendStudentBookingConfirmation(studentEmail, bookingData, eventData) {
+async function sendStudentTutorConfirmation(studentEmail, studentName, tutorName, tutorEmail, bookingData, eventData) {
   try {
     // Initialize transporter if not already done
     initializeTransporter();
@@ -251,66 +246,53 @@ async function sendStudentBookingConfirmation(studentEmail, bookingData, eventDa
       return false;
     }
 
-    // Format date and time - ensure Spain timezone
+    // Format date and time
     const startDateTime = new Date(eventData.start.dateTime);
-    const options = {
+    const formattedDate = startDateTime.toLocaleDateString('en-GB', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
-      day: 'numeric',
-      timeZone: 'Europe/Madrid'
-    };
-    const timeOptions = {
+      day: 'numeric'
+    });
+    const formattedTime = startDateTime.toLocaleTimeString('en-GB', {
       hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Europe/Madrid'
-    };
-    
-    const formattedDate = startDateTime.toLocaleDateString('en-GB', options);
-    const formattedTime = startDateTime.toLocaleTimeString('en-GB', timeOptions);
+      minute: '2-digit'
+    });
 
-    // Extract subject from event data
+    // Get subject from event summary
     const summaryParts = eventData.summary.split(' ');
-    let subjectIndex = 2; // Default position for UNASSIGNED events
+    let subjectIndex = 2; // Default position
     if (summaryParts[0].includes("ASSIGNED")) {
+      // If assigned, there will be the tutor name too, so subject starts later
       subjectIndex = 3;
     }
+    
+    // Join the remaining parts to get the full subject
     const subject = summaryParts.slice(subjectIndex).join(' ').replace('Tutoring Session', '').trim();
 
     // Create email options for student confirmation
     const mailOptions = {
       from: `"Tutorly Booking" <${process.env.EMAIL_USER}>`,
       to: studentEmail,
-      subject: `Booking Confirmation: ${subject} Tutoring Session`,
+      subject: `Tutor confirmed for your ${subject} session`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
-          <h2 style="color: #4a5568; text-align: center; margin-bottom: 20px;">Thank You for Your Booking</h2>
+          <h2 style="color: #4a5568; text-align: center; margin-bottom: 20px;">Your Tutor Has Been Confirmed</h2>
           
-          <p style="margin-bottom: 15px;">Dear ${bookingData.firstName},</p>
+          <p style="margin-bottom: 20px;">Hi ${studentName},</p>
           
-          <p style="margin-bottom: 15px;">Thank you for booking a tutoring session with Tutorly. We've received your request and are working to match you with the best tutor for your needs.</p>
+          <p style="margin-bottom: 20px;">Good news! Your tutoring session has been claimed by a tutor. <strong>${tutorName}</strong> (${tutorEmail}) will contact you shortly to discuss details about your upcoming session.</p>
           
           <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
             <p style="margin: 5px 0;"><strong>Subject:</strong> ${subject}</p>
-            <p style="margin: 5px 0;"><strong>Topic:</strong> ${bookingData.specificTopic || 'General tutoring'}</p>
             <p style="margin: 5px 0;"><strong>Date:</strong> ${formattedDate}</p>
             <p style="margin: 5px 0;"><strong>Time:</strong> ${formattedTime}</p>
-            <p style="margin: 5px 0;"><strong>Format:</strong> ${bookingData.classFormat}</p>
-            <p style="margin: 5px 0;"><strong>Size:</strong> ${bookingData.classSize}</p>
-            <p style="margin: 5px 0;"><strong>Duration:</strong> ${bookingData.classDuration}</p>
           </div>
           
-          <p style="margin-bottom: 15px;"><strong>What happens next?</strong></p>
-          <ul style="margin-bottom: 20px;">
-            <li>Your booking has been sent to our qualified tutors</li>
-            <li>A tutor will claim your session and contact you directly</li>
-            <li>You'll receive a follow-up email once a tutor has been assigned</li>
-          </ul>
-          
-          <p style="margin-bottom: 15px;">If you have any questions or need to make changes to your booking, please contact us at ${process.env.EMAIL_USER}.</p>
+          <p style="margin-bottom: 15px;">If you have any questions before hearing from your tutor, please feel free to respond to this email.</p>
           
           <div style="text-align: center; margin-top: 30px;">
-            <a href="${eventData.htmlLink}" style="background-color: #4285f4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Add to Calendar</a>
+            <a href="${eventData.htmlLink}" style="background-color: #4285f4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">View in Calendar</a>
           </div>
           
           <p style="margin-top: 30px; font-size: 12px; color: #666; text-align: center;">
@@ -322,10 +304,10 @@ async function sendStudentBookingConfirmation(studentEmail, bookingData, eventDa
 
     // Send email
     const info = await transporter.sendMail(mailOptions);
-    console.log('Booking confirmation email sent to student:', info.messageId);
+    console.log('Confirmation email sent to student:', info.messageId);
     return true;
   } catch (error) {
-    console.error('Error sending student booking confirmation:', error);
+    console.error('Error sending student confirmation:', error);
     return false;
   }
 }
@@ -333,5 +315,5 @@ async function sendStudentBookingConfirmation(studentEmail, bookingData, eventDa
 module.exports = {
   sendTutorNotifications,
   sendTutorConfirmation,
-  sendStudentBookingConfirmation
+  sendStudentTutorConfirmation
 };

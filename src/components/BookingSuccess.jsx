@@ -191,7 +191,7 @@ const BookingSuccess = () => {
                     // Save the booking info to our email as a backup
                     const emailSubject = `FALLBACK BOOKING: ${bookingData.firstName} ${bookingData.lastName}`;
                     const emailBody = `A booking was made but automatic processing failed. Please process manually:\n\n${JSON.stringify(bookingData, null, 2)}`;
-                    window.location.href = `mailto:info@tutorly.com?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+                    window.location.href = `mailto:tutorlynow@gmail.com?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
                   }
                 }}
               >
@@ -224,7 +224,7 @@ const BookingSuccess = () => {
           </div>
         )}
         
-        <p className="contact-info">If you have any questions, please contact us at <a href="mailto:info@tutorly.com">info@tutorly.com</a></p>
+        <p className="contact-info">If you have any questions, please contact us at <a href="mailto:tutorlynow@gmail.com">tutorlynow@gmail.com</a></p>
         
         <div className="success-actions">
           <Link to="/" className="button-secondary">Return to Home</Link>
