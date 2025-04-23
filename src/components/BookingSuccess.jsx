@@ -3,6 +3,14 @@ import { useLocation } from 'react-router';
 import { Link } from 'react-router-dom';
 import './BookingForm.css';
 
+// For API URL, add a fallback for local development
+const LOCAL_TESTING = false; // Change to false for production deployment
+const API_URL = LOCAL_TESTING 
+  ? 'http://localhost:3001' 
+  : 'https://tutorly-booking-automation.onrender.com';
+
+console.log("Using API URL in BookingSuccess:", API_URL);
+
 const BookingSuccess = () => {
   const [bookingData, setBookingData] = useState(null);
   const [verificationStatus, setVerificationStatus] = useState({ status: 'loading', message: 'Verifying your payment...' });
@@ -41,16 +49,13 @@ const BookingSuccess = () => {
     if (sessionId) {
       const processCheckoutSession = async () => {
         try {
-          // Use hardcoded fallback for local development
-          const API_URL = 'http://localhost:3001';
-          
-          console.log('Verifying and processing session:', sessionId);
+          console.log('Verifying and processing session:', sessionId, 'using API URL:', API_URL);
           setVerificationStatus({
             status: 'loading',
             message: 'Processing your booking...'
           });
           
-          // First verify the session
+          // First verify the session - using the proper API_URL, not hardcoded localhost
           const verifyResponse = await fetch(`${API_URL}/api/verify-session?session_id=${sessionId}`);
           
           // Check if the response is JSON

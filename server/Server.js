@@ -710,6 +710,125 @@ async function sendTutorAssignmentEmail(tutorEmail, event, studentInfo) {
   }
 }
 
+// Add a proper session verification endpoint if missing
+app.get('/api/verify-session', async (req, res) => {
+  try {
+    const sessionId = req.query.session_id;
+    
+    if (!sessionId) {
+      return res.status(400).json({ success: false, error: 'Session ID is required' });
+    }
+    
+    console.log('Verifying session:', sessionId);
+    
+    // Retrieve the checkout session
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    
+    if (!session) {
+      return res.status(404).json({ success: false, error: 'Session not found' });
+    }
+    
+    console.log('Session verification result:', {
+      id: session.id,
+      status: session.status,
+      payment_status: session.payment_status
+    });
+    
+    return res.status(200).json({ 
+      success: true, 
+      paid: session.payment_status === 'paid',
+      status: session.status,
+      customer: session.customer_email,
+      hasMetadata: !!session.metadata?.bookingInfo,
+      // Add flag to check if this session has already been processed
+      alreadyProcessed: session.metadata?.processed === 'true'
+    });
+  } catch (error) {
+    console.error('Error verifying session:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Make sure we have the process-checkout-booking endpoint
+app.post('/api/process-checkout-booking', async (req, res) => {
+  try {
+    const { sessionId, bookingData } = req.body;
+    
+    if (!sessionId) {
+      return res.status(400).json({ success: false, error: 'Session ID is required' });
+    }
+    
+    if (!bookingData) {
+      return res.status(400).json({ success: false, error: 'Booking data is required' });
+    }
+    
+    console.log('Processing booking for session:', sessionId);
+    
+    // Verify the session exists and was paid
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    
+    if (!session) {
+      return res.status(404).json({ success: false, error: 'Session not found' });
+    }
+    
+    if (session.payment_status !== 'paid') {
+      return res.status(400).json({ 
+        success: false, 
+        error: `Payment not completed. Current status: ${session.payment_status}` 
+      });
+    }
+    
+    // Check if this session has already been processed (prevent duplicates)
+    if (session.metadata?.processed === 'true') {
+      console.log('Session already processed, skipping duplicate processing');
+      return res.status(200).json({
+        success: true,
+        message: 'Booking was already processed successfully',
+        alreadyProcessed: true
+      });
+    }
+    
+    // Create a complete booking data object with payment details
+    const completeBookingData = {
+      ...bookingData,
+      paymentId: session.payment_intent,
+      paymentStatus: 'Paid',
+      status: 'Confirmed',
+      timestamp: new Date().toISOString(),
+    };
+    
+    // Save to Google Sheets
+    const sheetResult = await sheetsModule.addBooking(completeBookingData);
+    console.log('Booking saved to sheet:', sheetResult ? 'Success' : 'Failed');
+    
+    // Create Calendar event
+    const calendarResult = await calendarModule.createCalendarEvent(completeBookingData);
+    console.log('Calendar event created:', calendarResult.id || 'Failed');
+    
+    // Mark the session as processed to prevent duplicates
+    await stripe.checkout.sessions.update(sessionId, {
+      metadata: {
+        ...session.metadata,
+        processed: 'true',
+        processedTimestamp: new Date().toISOString()
+      }
+    });
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Booking processed successfully',
+      data: {
+        sheetId: sheetResult,
+        calendarId: calendarResult.id
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error processing booking from success page:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Start the calendar monitoring when server loads
 startCalendarMonitoring();
 
