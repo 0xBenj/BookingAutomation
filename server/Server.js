@@ -230,6 +230,14 @@ app.post('/api/payment-success', async (req, res) => {
       calendarModule.createCalendarEvent(completeBookingData)
     ]);
     
+    // Send payment confirmation email to the student
+    if (mailerModule && typeof mailerModule.sendPaymentConfirmation === 'function' && completeBookingData.email) {
+      await mailerModule.sendPaymentConfirmation(completeBookingData);
+      console.log('Payment confirmation email sent to:', completeBookingData.email);
+    } else {
+      console.warn('Could not send payment confirmation email - mailer module missing or email not provided');
+    }
+    
     // Return success response
     res.status(200).json({
       success: true,
@@ -804,6 +812,14 @@ app.post('/api/process-checkout-booking', async (req, res) => {
     // Create Calendar event
     const calendarResult = await calendarModule.createCalendarEvent(completeBookingData);
     console.log('Calendar event created:', calendarResult.id || 'Failed');
+    
+    // Send payment confirmation email to the student
+    if (mailerModule && typeof mailerModule.sendPaymentConfirmation === 'function' && completeBookingData.email) {
+      await mailerModule.sendPaymentConfirmation(completeBookingData);
+      console.log('Payment confirmation email sent to:', completeBookingData.email);
+    } else {
+      console.warn('Could not send payment confirmation email - mailer module missing or email not provided');
+    }
     
     // Mark the session as processed to prevent duplicates
     await stripe.checkout.sessions.update(sessionId, {

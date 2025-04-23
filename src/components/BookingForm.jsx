@@ -906,9 +906,12 @@ const BookingForm = () => {
                 >
                   <option value="">Select an option</option>
                   <option value="No preference">No preference</option>
-                  {formData.subjectCategory && tutorsBySubject[formData.subjectCategory]?.map(tutor => (
-                    <option key={tutor.email} value={tutor.name}>{tutor.name}</option>
-                  ))}
+                  {formData.subjectCategory && tutorsBySubject[formData.subjectCategory]
+                    ?.filter(tutor => tutor.name !== "Tutorly") // Filter out the Tutorly option
+                    .map(tutor => (
+                      <option key={tutor.email} value={tutor.name}>{tutor.name}</option>
+                    ))
+                  }
                 </select>
                 {formErrors.tutorPreference && <div className="error-text">{formErrors.tutorPreference}</div>}
               </div>

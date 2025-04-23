@@ -312,8 +312,94 @@ async function sendStudentTutorConfirmation(studentEmail, studentName, tutorName
   }
 }
 
+/**
+ * Send payment confirmation email to student
+ * 
+ * This function notifies the student that their payment was successful
+ * and gives them details about their booking.
+ * 
+ * @param {Object} bookingData - Complete booking information
+ * @returns {Promise} - Result of sending email
+ */
+async function sendPaymentConfirmation(bookingData) {
+  try {
+    // Initialize transporter if not already done
+    initializeTransporter();
+    
+    if (!transporter) {
+      console.error('Email transporter not initialized');
+      return false;
+    }
+
+    // Format date and time for readability
+    const startDateTime = new Date(bookingData.preferredDate + 'T' + bookingData.preferredTime);
+    const formattedDate = startDateTime.toLocaleDateString('en-GB', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const formattedTime = startDateTime.toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    // Create email options
+    const mailOptions = {
+      from: `"Tutorly Booking" <${process.env.EMAIL_USER}>`,
+      to: bookingData.email,
+      subject: `Booking Confirmation - ${bookingData.subjectCategory} Session`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+          <h2 style="color: #4a5568; text-align: center; margin-bottom: 20px;">Your Booking is Confirmed!</h2>
+          
+          <p style="margin-bottom: 20px;">Hi ${bookingData.firstName},</p>
+          
+          <p style="margin-bottom: 20px;">Thank you for your booking. Your payment has been successfully processed, and we've reserved your tutoring session.</p>
+          
+          <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+            <p style="margin: 5px 0;"><strong>Subject:</strong> ${bookingData.subjectCategory}</p>
+            <p style="margin: 5px 0;"><strong>Topic:</strong> ${bookingData.specificTopic || 'General tutoring'}</p>
+            <p style="margin: 5px 0;"><strong>Date:</strong> ${formattedDate}</p>
+            <p style="margin: 5px 0;"><strong>Time:</strong> ${formattedTime}</p>
+            <p style="margin: 5px 0;"><strong>Format:</strong> ${bookingData.classFormat}</p>
+            <p style="margin: 5px 0;"><strong>Class Size:</strong> ${bookingData.classSize}</p>
+            <p style="margin: 5px 0;"><strong>Duration:</strong> ${bookingData.classDuration}</p>
+          </div>
+          
+          <p style="margin-bottom: 15px;"><strong>What happens next?</strong></p>
+          
+          <p style="margin-bottom: 15px;">We're currently assigning a tutor to your session. You'll receive another email once a tutor has been confirmed for your session.</p>
+          
+          <p style="margin-bottom: 15px;">If you requested a specific tutor (${bookingData.tutorPreference}), we'll do our best to accommodate your preference.</p>
+          
+          <p style="margin-bottom: 15px;">If you have any questions in the meantime, please reply to this email.</p>
+          
+          <p style="margin-top: 30px; text-align: center;">
+            <em>We look forward to helping you achieve your academic goals!</em>
+          </p>
+          
+          <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px; font-size: 12px; color: #666; text-align: center;">
+            <p>Tutorly - Professional Tutoring Services</p>
+            <p>Contact us: <a href="mailto:tutorlynow@gmail.com">tutorlynow@gmail.com</a></p>
+          </div>
+        </div>
+      `
+    };
+
+    // Send email
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Payment confirmation email sent to student:', info.messageId);
+    return true;
+  } catch (error) {
+    console.error('Error sending payment confirmation email:', error);
+    return false;
+  }
+}
+
 module.exports = {
   sendTutorNotifications,
   sendTutorConfirmation,
-  sendStudentTutorConfirmation
+  sendStudentTutorConfirmation,
+  sendPaymentConfirmation // Export the new function
 };
