@@ -3,6 +3,7 @@ const tutorsBySubject = {
   "Applied Mathematics for Management": [
     // Tutorly email
     { email: "tutorlynow@gmail.com", name: "Tutorly" },
+    { email: "marcpigemstyle8@gmail.com", name: "Marc Piggem" },
     { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
     { email: "albertomilone8@gmail.com", name: "Alberto Milone" },
     { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasilijevic" },
@@ -18,6 +19,7 @@ const tutorsBySubject = {
   "Descriptive Statistics and Probability": [
     // Tutorly email
     { email: "tutorlynow@gmail.com", name: "Tutorly" },
+    { email: "marcpigemstyle8@gmail.com", name: "Marc Piggem" },
     { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
     { email: "albertomilone8@gmail.com", name: "Alberto Milone" },
     { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
@@ -48,6 +50,7 @@ const tutorsBySubject = {
     // Tutorly email
     { email: "tutorlynow@gmail.com", name: "Tutorly" },
 
+    { email: "marcpigemstyle8@gmail.com", name: "Marc Piggem" },
     { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
     { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
     { email: "F.gesinski@gmail.com", name: "Filippa Gesinski" },
@@ -68,6 +71,8 @@ const tutorsBySubject = {
   "Advanced Accounting": [
     // Tutorly email
     { email: "tutorlynow@gmail.com", name: "Tutorly" },
+
+    { email: "marcpigemstyle8@gmail.com", name: "Marc Piggem" },
     
     { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
     { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
@@ -88,6 +93,7 @@ const tutorsBySubject = {
     // Tutorly email
     { email: "tutorlynow@gmail.com", name: "Tutorly" },
 
+    { email: "marcpigemstyle8@gmail.com", name: "Marc Piggem" },
     { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
     { email: "nourbishouty@gmail.com", name: "Nour Bishouty" },
     { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
@@ -136,6 +142,7 @@ const tutorsBySubject = {
     { email: "benben113el@gmail.com", name: "Beni" },
 
 
+    { email: "marcpigemstyle8@gmail.com", name: "Marc Piggem" },
     { email: "federico.martino21@gmail.com", name: "Federico Martino" },
     { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
     { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
@@ -147,7 +154,8 @@ const tutorsBySubject = {
   "Tax Law": [
     // Tutorly email
     { email: "tutorlynow@gmail.com", name: "Tutorly" },
-
+    
+    { email: "marcpigemstyle8@gmail.com", name: "Marc Piggem" },
     { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
     { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
     { email: "federico.martino21@gmail.com", name: "Federico Martino" },
