@@ -158,7 +158,9 @@ Student: ${bookingData.firstName} ${bookingData.lastName}
 Class Format: ${bookingData.classFormat}
 Class Size: ${bookingData.classSize}
 Duration: ${bookingData.classDuration}
-Booking Reference: ${bookingRef}${priceInfo}`,
+Booking Reference: ${bookingRef}${priceInfo}
+Preferred Tutor: ${bookingData.tutorPreference || 'No preference'}`,
+
       start: {
         dateTime: startDateTime.toISOString(),
         timeZone: 'Europe/Madrid'
