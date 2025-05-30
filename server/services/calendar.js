@@ -121,8 +121,14 @@ async function createCalendarEvent(bookingData) {
     
     const durationMinutes = durationMap[bookingData.classDuration] || 60;
 
-    const startDateTime = new Date(`${bookingData.preferredDate}T${bookingData.preferredTime}:00`);
-    const endDateTime = new Date(startDateTime.getTime() + durationMinutes * 60000);
+    // Fix timezone issue: construct the datetime properly in Madrid timezone
+    // Create the datetime string directly in the Madrid timezone format
+    const startDateTimeString = `${bookingData.preferredDate}T${bookingData.preferredTime}:00`;
+    const endDateTime = new Date(startDateTimeString);
+    endDateTime.setMinutes(endDateTime.getMinutes() + durationMinutes);
+    
+    // Format end time for Madrid timezone
+    const endDateTimeString = endDateTime.toISOString().slice(0, 19);
 
     // Add price information to the event description if available
     const priceInfo = bookingData.price 
@@ -162,11 +168,11 @@ Booking Reference: ${bookingRef}${priceInfo}
 Preferred Tutor: ${bookingData.tutorPreference || 'No preference'}`,
 
       start: {
-        dateTime: startDateTime.toISOString(),
+        dateTime: startDateTimeString,
         timeZone: 'Europe/Madrid'
       },
       end: {
-        dateTime: endDateTime.toISOString(),
+        dateTime: endDateTimeString,
         timeZone: 'Europe/Madrid'
       },
       // Gray for unassigned events
