@@ -2,6 +2,7 @@ require('dotenv').config();
 const { google } = require('googleapis');
 const tutorsModule = require('../tutors');
 const mailerModule = require('./mailer');
+const universitiesData = require('../../src/config/universities.js');
 
 //===================================================================
 // GOOGLE CALENDAR SERVICE
@@ -13,15 +14,16 @@ const mailerModule = require('./mailer');
  * Create a Google Calendar event for a booking and notify tutors
  * 
  * This is the main calendar integration function that:
- * 1. Selects the appropriate subject-specific calendar
+ * 1. Selects the appropriate subject-specific calendar based on university
  * 2. Creates an "UNASSIGNED" event with booking details
  * 3. Stores student info securely in private extended properties
  * 4. Notifies all qualified tutors about the new opportunity
  * 
  * @param {Object} bookingData - The complete booking details from the form
+ * @param {string} university - The university slug (esade/lycee) - optional for backward compatibility
  * @returns {Promise<Object>} - The created calendar event
  */
-async function createCalendarEvent(bookingData) {
+async function createCalendarEvent(bookingData, university = null) {
   try {
     // Verify required environment variables
     if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || 
@@ -29,69 +31,37 @@ async function createCalendarEvent(bookingData) {
       throw new Error('Missing required Google Calendar environment variables');
     }
 
-    // Select the appropriate calendar ID based on subject
+    // Select the appropriate calendar ID based on university and subject
     let calendarId = process.env.GOOGLE_CALENDAR_ID; // Default calendar
     let calendarName = 'Main';
     
-    // Normalize the subject for matching with environment variables
+    // Determine university - use parameter if provided, otherwise try to detect from bookingData
+    const universitySlug = university || bookingData.university || 'esade'; // Default to esade for backward compatibility
+    
+    console.log('University parameter:', university);
+    console.log('Booking data university:', bookingData.university);
+    console.log('Final university slug:', universitySlug);
+    
+    // Get university config from universities.js
+    const universityConfig = universitiesData.default[universitySlug];
     const subject = bookingData.subjectCategory;
-    if (subject) {
-      // Create a map of possible environment variable keys to check for this subject
-      const possibleKeys = [];
+    
+    if (subject && universityConfig) {
+      // Find the subject configuration
+      const subjectConfig = universityConfig.subjects.find(s => s.value === subject);
       
-      // 1. Try direct match first (exact match with spaces replaced by underscores)
-      const directKey = subject.replace(/\s+/g, '_').toUpperCase() + '_CALENDAR_ID';
-      possibleKeys.push(directKey);
-      
-      // 2. Try simplified keys based on common words in the subject
-      const simplifiedSubject = subject.toUpperCase()
-        .replace(/FOR MANAGEMENT|AND DATA ANALYSIS|AND PROBABILITY/g, '')
-        .trim()
-        .replace(/\s+/g, '_');
-      
-      if (simplifiedSubject !== directKey.replace('_CALENDAR_ID', '')) {
-        possibleKeys.push(simplifiedSubject + '_CALENDAR_ID');
-      }
-      
-      // 3. Check for specific mappings based on subject categories
-      const subjectMappings = {
-        'Applied Mathematics for Management': 'APPLIED_MATHEMATICS_CALENDAR_ID',
-        'Descriptive Statistics and Probability': 'DESCRIPTIVE_STATISTICS_CALENDAR_ID',
-        'Statistical Inference and Data Analysis': 'STATISTICAL_INFERENCE_CALENDAR_ID',
-        'Basics of Financial Accounting': 'FINANCIAL_ACCOUNTING_BASICS_CALENDAR_ID',
-        'Advanced Accounting': 'ADVANCED_ACCOUNTING_CALENDAR_ID',
-        'Microeconomics': 'MICROECONOMICS_CALENDAR_ID',
-        'Macroeconomics': 'MACROECONOMICS_CALENDAR_ID',
-        'Managerial Economics': 'MANAGERIAL_ECONOMICS_CALENDAR_ID',
-        'Financial Economics': 'FINANCIAL_ECONOMICS_CALENDAR_ID',
-        'Business Law': 'BUSINESS_LAW_CALENDAR_ID',
-        'Tax Law': 'TAX_LAW_CALENDAR_ID',
-        'Managing Digital Information': 'DIGITAL_INFORMATION_CALENDAR_ID',
-        'Information Systems': 'INFORMATION_SYSTEMS_CALENDAR_ID',
-        'Financial Analysis': 'FINANCIAL_ANALYSIS_CALENDAR_ID',
-        'English': 'ENGLISH_CALENDAR_ID',
-        'Spanish': 'SPANISH_CALENDAR_ID',
-        'German': 'GERMAN_CALENDAR_ID'
-      };
-      
-      if (subjectMappings[subject]) {
-        possibleKeys.push(subjectMappings[subject]);
-      }
-      
-      // Try each possible key to find a matching calendar
-      let foundCalendar = false;
-      for (const key of possibleKeys) {
-        if (process.env[key]) {
-          calendarId = process.env[key];
-          calendarName = subject;
-          console.log(`Using ${subject} calendar with key ${key}: ${calendarId.substring(0, 10)}...`);
-          foundCalendar = true;
-          break;
+      if (subjectConfig && subjectConfig.calendarVar) {
+        // Get calendar ID from environment using the calendarVar
+        const calendarEnvVar = subjectConfig.calendarVar;
+        if (process.env[calendarEnvVar]) {
+          calendarId = process.env[calendarEnvVar];
+          calendarName = `${universitySlug.toUpperCase()} - ${subject}`;
+          console.log(`Using ${universitySlug} ${subject} calendar with key ${calendarEnvVar}: ${calendarId.substring(0, 10)}...`);
+        } else {
+          console.log(`Calendar environment variable ${calendarEnvVar} not found for ${universitySlug} subject: ${subject}, using default calendar`);
         }
-      }
-      
-      if (!foundCalendar) {
-        console.log(`No specific calendar found for subject: ${subject}, using default calendar`);
+      } else {
+        console.log(`No subject configuration found for ${universitySlug} subject: ${subject}, using default calendar`);
       }
     }
     
@@ -123,12 +93,27 @@ async function createCalendarEvent(bookingData) {
 
     // Fix timezone issue: construct the datetime properly in Madrid timezone
     // Create the datetime string directly in the Madrid timezone format
-    const startDateTimeString = `${bookingData.preferredDate}T${bookingData.preferredTime}:00`;
-    const endDateTime = new Date(startDateTimeString);
-    endDateTime.setMinutes(endDateTime.getMinutes() + durationMinutes);
+    console.log('Booking date:', bookingData.preferredDate);
+    console.log('Booking time:', bookingData.preferredTime);
     
-    // Format end time for Madrid timezone
-    const endDateTimeString = endDateTime.toISOString().slice(0, 19);
+    const startDateTimeString = `${bookingData.preferredDate}T${bookingData.preferredTime}:00`;
+    console.log('Constructed datetime string:', startDateTimeString);
+    
+    // Parse the datetime as if it's already in Madrid timezone
+    const startDateTime = new Date(startDateTimeString);
+    console.log('Parsed start datetime:', startDateTime);
+    
+    if (isNaN(startDateTime.getTime())) {
+      throw new Error(`Invalid date/time format: ${startDateTimeString}`);
+    }
+    
+    // Calculate end time by adding duration minutes
+    const endDateTime = new Date(startDateTime.getTime() + (durationMinutes * 60 * 1000));
+    
+    // Format both times consistently for Madrid timezone
+    const endDateTimeString = `${bookingData.preferredDate}T${String(endDateTime.getHours()).padStart(2, '0')}:${String(endDateTime.getMinutes()).padStart(2, '0')}:00`;
+    
+    console.log('End datetime string:', endDateTimeString);
 
     // Add price information to the event description if available
     const priceInfo = bookingData.price 
@@ -193,8 +178,15 @@ Preferred Tutor: ${bookingData.tutorPreference || 'No preference'}`,
     
     // Get tutors for this subject and send notifications
     try {
-      // Get tutor emails for this subject
-      const tutorEmails = tutorsModule.getTutorEmailsForSubject(bookingData.subjectCategory);
+      let tutorEmails = [];
+      
+      // First try to get tutors from universities.js
+      if (universityConfig && universityConfig.tutors && universityConfig.tutors[bookingData.subjectCategory]) {
+        tutorEmails = universityConfig.tutors[bookingData.subjectCategory].map(tutor => tutor.email);
+      } else {
+        // Fallback to tutors module with university parameter
+        tutorEmails = tutorsModule.getTutorEmailsForSubject(bookingData.subjectCategory, universitySlug);
+      }
       
       if (tutorEmails && tutorEmails.length > 0) {
         console.log(`Sending notifications to ${tutorEmails.length} tutors for ${bookingData.subjectCategory}`);

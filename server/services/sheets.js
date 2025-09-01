@@ -17,9 +17,10 @@ const { google } = require('googleapis');
  * - Pricing information
  * 
  * @param {Object} bookingData - All booking information from the form
+ * @param {string} university - The university slug (esade/lycee) - optional for backward compatibility
  * @returns {Promise<Object>} - The Google Sheets API response
  */
-async function addBooking(bookingData) {
+async function addBooking(bookingData, university = null) {
   try {
     console.log('addBooking function called with data:', bookingData);
     
@@ -38,31 +39,51 @@ async function addBooking(bookingData) {
     await auth.authorize();
     const sheets = google.sheets({ version: 'v4', auth });
     
-    // Append data to the spreadsheet
+    // Determine university - use parameter if provided, otherwise try to detect from bookingData
+    const universitySlug = university || bookingData.university || 'esade'; // Default to esade for backward compatibility
+    
+    // Determine which sheet to use based on university
+    let sheetName = 'Sheet1'; // Always Sheet1 for ESADE
+    if (universitySlug === 'lycee') {
+      sheetName = 'Sheet2'; // Always Sheet2 for Lycee bookings
+    }
+    
+    // Get tutors for the subject to include in the sheet
+    const universitiesData = require('../../src/config/universities.js');
+    const universityConfig = universitiesData.default[universitySlug];
+    const subjectTutors = universityConfig?.tutors?.[bookingData.subjectCategory] || [];
+    
+    // Format tutors as "Name (email), Name (email), ..." 
+    const tutorsString = subjectTutors
+      .map(tutor => `${tutor.name} (${tutor.email})`)
+      .join(', ');
+
+    // Append data to the appropriate sheet
     const response = await sheets.spreadsheets.values.append({
       spreadsheetId: process.env.SPREADSHEET_ID,
-      range: `${process.env.SHEET_NAME || 'Bookings'}!A:Q`, // A to Q for 17 columns (added price)
+      range: `${sheetName}!A:A`, // Start from column A, let Google Sheets handle the rest
       valueInputOption: 'USER_ENTERED',
+      insertDataOption: 'INSERT_ROWS',
       resource: {
         values: [
           [
-            new Date().toISOString(),                           // Timestamp (generated server-side)
-            bookingData.firstName || '',                        // First Name
-            bookingData.lastName || '',                         // Last Name
-            bookingData.email || '',                            // Email
-            bookingData.phone || '',                            // Phone
-            bookingData.newsletterSignup ? 'Yes' : 'No',        // Newsletter Signup
-            bookingData.subjectCategory || '',                  // Subject Category
+            `${bookingData.firstName} ${bookingData.lastName}`.trim(), // NAME (FULL NAME)
+            bookingData.email || '',                            // E-MAIL
+            bookingData.phone || '',                            // PHONE NUMBER
+            bookingData.subjectCategory || '',                  // SUBJECT
+            bookingData.classFormat || '',                      // FORMAT
+            bookingData.classSize || '',                        // SIZE
+            bookingData.classDuration || '',                    // DURATION
+            bookingData.preferredTime || '',                    // TIME
+            bookingData.preferredDate || '',                    // DATE
+            bookingData.tutorPreference || '',                  // PREF. TUTOR
+            // Additional columns after the main ones
             bookingData.specificTopic || '',                    // Specific Topic
-            bookingData.classFormat || '',                      // Class Format
-            bookingData.classSize || '',                        // Class Size
-            bookingData.classDuration || '',                    // Class Duration
-            bookingData.preferredDate || '',                    // Preferred Date
-            bookingData.preferredTime || '',                    // Preferred Time
-            bookingData.tutorPreference || '',                  // Tutor Preference
             bookingData.referralSource || '',                   // Referral Source
             bookingData.status || 'Pending',                    // Status
-            bookingData.price ? `€${bookingData.price}` : ''    // Price
+            bookingData.price ? `€${bookingData.price}` : '',   // Price
+            universitySlug || 'esade',                          // University
+            tutorsString                                        // Available Tutors for this subject
           ]
         ]
       }
@@ -101,28 +122,27 @@ async function initializeSheetHeaders() {
     // Set headers in the spreadsheet
     await sheets.spreadsheets.values.update({
       spreadsheetId: process.env.SPREADSHEET_ID,
-      range: `${process.env.SHEET_NAME || 'Bookings'}!A1:Q1`,
+      range: `${process.env.SHEET_NAME || 'Bookings'}!A1:P1`,
       valueInputOption: 'USER_ENTERED',
       resource: {
         values: [
           [
-            'Timestamp',
-            'First Name',
-            'Last Name',
-            'Email',
-            'Phone',
-            'Newsletter Signup',
-            'Subject Category',
+            'NAME (FULL NAME)',
+            'E-MAIL',
+            'PHONE NUMBER',
+            'SUBJECT',
+            'FORMAT',
+            'SIZE',
+            'DURATION',
+            'TIME',
+            'DATE',
+            'PREF. TUTOR',
             'Specific Topic',
-            'Class Format',
-            'Class Size',
-            'Class Duration',
-            'Preferred Date',
-            'Preferred Time',
-            'Tutor Preference',
             'Referral Source',
             'Status',
-            'Price'
+            'Price',
+            'University',
+            'Available Tutors'
           ]
         ]
       }

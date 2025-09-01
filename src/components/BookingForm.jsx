@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import './BookingForm.css';
-import { tutorsBySubject } from '../data/tutors';
+import { useUniversity } from '../contexts/UniversityContext';
 import { loadStripe } from '@stripe/stripe-js';
 import {
   Elements,
@@ -21,7 +21,7 @@ const API_URL = LOCAL_TESTING
   : 'https://tutorly-booking-automation.onrender.com';
 
 // Frontend URL hardcoded for success and cancel redirects
-const FRONTEND_URL = 'https://tutorly-booking.web.app';
+const FRONTEND_URL = 'https://tutorly-booking.web.app/';
 
 console.log("TESTING MODE:", LOCAL_TESTING ? "LOCAL" : "PRODUCTION");
 console.log("Using API URL:", API_URL);
@@ -98,26 +98,7 @@ const FormSection = React.memo(({ id, title, icon, children }) => (
   </div>
 ));
 
-// Subject options array
-const subjectOptions = [
-  { value: "Applied Mathematics for Management", label: "Applied Mathematics for Management" },
-  { value: "Descriptive Statistics and Probability", label: "Descriptive Statistics and Probability" },
-  { value: "Basics of Financial Accounting", label: "Basics of Financial Accounting" },
-  { value: "Advanced Accounting", label: "Advanced Accounting" },
-  { value: "Microeconomics", label: "Microeconomics" },
-  { value: "Macroeconomics", label: "Macroeconomics" },
-  { value: "Business Law", label: "Business Law" },
-  { value: "Tax Law", label: "Tax Law" },
-  { value: "Managing Digital Information", label: "Managing Digital Information" },
-  { value: "Statistical Inference and Data Analysis", label: "Statistical Inference and Data Analysis" },
-  { value: "Managerial Economics", label: "Managerial Economics" },
-  { value: "Financial Analysis", label: "Financial Analysis" },
-  { value: "Financial Economics", label: "Financial Economics" },
-  { value: "Information Systems", label: "Information Systems" },
-  { value: "English", label: "English" },
-  { value: "Spanish", label: "Spanish" },
-  { value: "German", label: "German" }
-];
+// Subject options will be loaded dynamically from UniversityContext
 
 // Pricing function to calculate costs based on class size and duration
 const calculatePrice = (classSize, classDuration) => {
@@ -256,6 +237,8 @@ const CheckoutForm = React.memo(({ handlePaymentSuccess, handlePaymentError, tot
 });
 
 const BookingForm = () => {
+  // Get university context
+  const { university, config, loading: universityLoading, error: universityError, getTutorsForSubject, getSubjects, isValidUniversity } = useUniversity();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -431,7 +414,7 @@ const BookingForm = () => {
         body: JSON.stringify({
           amount: totalPrice.toFixed(2),
           customerEmail: formData.email,
-          bookingData: formData,
+          bookingData: { ...formData, university },
           frontendUrl: FRONTEND_URL // Pass the frontend URL to the server
         })
       });
@@ -561,6 +544,33 @@ const BookingForm = () => {
     );
   };
 
+  // Show loading state while university data is loading
+  if (universityLoading) {
+    return (
+      <div className="tutorly-container">
+        <div className="tutorly-header">
+          <h1>Loading...</h1>
+          <p>Please wait while we load your university's booking form.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state for invalid universities
+  if (universityError || !isValidUniversity) {
+    return (
+      <div className="tutorly-container">
+        <div className="tutorly-header">
+          <h1>University Not Found</h1>
+          <p>The requested university could not be found. Please check the URL and try again.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Get dynamic data from university context
+  const subjectOptions = getSubjects();
+
   // Success message
   if (submitted) {
     return (
@@ -633,8 +643,8 @@ const BookingForm = () => {
   return (
     <div className="tutorly-container">
       <div className="tutorly-header">
-        <h1>Join our Solo, Duo, Trio or Quadrio Classes!</h1>
-        <p>Interested in joining our classes? Fill out some information and we will be in touch shortly!</p>
+        <h1>{config?.content?.heroTitle || 'Join our Solo, Duo, Trio or Quadrio Classes!'}</h1>
+        <p>{config?.content?.heroDescription || 'Interested in joining our classes? Fill out some information and we will be in touch shortly!'}</p>
       </div>
       
       <div className="tutorly-form">
@@ -906,7 +916,7 @@ const BookingForm = () => {
                 >
                   <option value="">Select an option</option>
                   <option value="No preference">No preference</option>
-                  {formData.subjectCategory && tutorsBySubject[formData.subjectCategory]
+                  {formData.subjectCategory && getTutorsForSubject(formData.subjectCategory)
                     ?.filter(tutor => tutor.name !== "Tutorly") // Filter out the Tutorly option
                     .map(tutor => (
                       <option key={tutor.email} value={tutor.name}>{tutor.name}</option>

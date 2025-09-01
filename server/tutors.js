@@ -1,268 +1,44 @@
-// Define tutor data per specific subject
-const tutorsBySubject = {
-  "Applied Mathematics for Management": [
-    // Tutorly email
-    { email: "tutorlynow@gmail.com", name: "Tutorly" },
-    { email: "marcpigemstyle8@gmail.com", name: "Marc Piggem" },
-    { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
-    { email: "albertomilone8@gmail.com", name: "Alberto Milone" },
-    { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasilijevic" },
-    { email: "nikosmichail.apostolakis@alumni.esade.edu", name: "Niko Apostolakis" },
-    { email: "federico.martino21@gmail.com", name: "Federico Martino" },
-    { email: "Achille.zerbib@gmail.com", name: "Achille Zerbib" },
-    { email: "cire3310@gmail.com", name: "Eric Darasteanu" },
-    { email: "joanbatllorius@gmail.com", name: "Joan Batllo" },
-    { email: "alessandroromeo554@gmail.com", name: "Alessandro Romeo" },
-    { email: "flavia.santi@alumni.esade.edu", name: "Flavia Santi" },
-    { email: "gregoireduplessis7@gmail.com", name: "Grégoire du Plessis" }
-  ],
-  "Descriptive Statistics and Probability": [
-    // Tutorly email
-    { email: "tutorlynow@gmail.com", name: "Tutorly" },
-    { email: "marcpigemstyle8@gmail.com", name: "Marc Piggem" },
-    { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
-    { email: "albertomilone8@gmail.com", name: "Alberto Milone" },
-    { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
-    { email: "nikosmichail.apostolakis@alumni.esade.edu", name: "Niko Apostolakis" },
-    { email: "Achille.zerbib@gmail.com", name: "Achille Zerbib" },
-    { email: "romanemichaeli@gmail.com", name: "Romane Michaeli" },
-    { email: "cire3310@gmail.com", name: "Eric Darasteanu" },
-    { email: "joanbatllorius@gmail.com", name: "Joan Batllo" },
-    { email: "martintuancarrasco@gmail.com", name: "Martin Carrasco" },
-    { email: "alessandroromeo554@gmail.com", name: "Alessandro Romeo" },
-    { email: "flavia.santi@alumni.esade.edu", name: "Flavia Santi" },
-    { email: "marittaelsagore@gmail.com", name: "Maritta Gore" },
-    { email: "simon.bahno@gmail.com", name: "Simon Bahno" },
-    { email: "gabriella.mccann@icloud.com", name: "Gabriella McCann" }
-  ],
-  "Statistical Inference and Data Analysis": [
-    // Tutorly email
-    { email: "tutorlynow@gmail.com", name: "Tutorly" },
-    { email: "albertomilone8@gmail.com", name: "Alberto Milone" },
-    { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
-    { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasilijevic" },
-    { email: "joanbatllorius@gmail.com", name: "Joan Batllo" },
-    { email: "martintuancarrasco@gmail.com", name: "Martin Carrasco" },
-    { email: "marittaelsagore@gmail.com", name: "Maritta Gore" },
-    { email: "marco.morchio0505@gmail.com", name: "Marco Morchio" }
-  ],
-  "Basics of Financial Accounting": [
-    // Tutorly email
-    { email: "tutorlynow@gmail.com", name: "Tutorly" },
-
-    { email: "marcpigemstyle8@gmail.com", name: "Marc Piggem" },
-    { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
-    { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
-    { email: "F.gesinski@gmail.com", name: "Filippa Gesinski" },
-    { email: "nikosmichail.apostolakis@alumni.esade.edu", name: "Niko Apostolakis" },
-    { email: "Achille.zerbib@gmail.com", name: "Achille Zerbib" },
-    { email: "giorgio.goretti05@gmail.com", name: "Giorgio Goretti" },
-    { email: "giuseppeleonardo.mazza@alumni.esade.edu", name: "Giuseppe Mazza" },
-    { email: "ginevra.fundaro@alumni.esade.edu", name: "Ginevra Fundaro" },
-    { email: "albertomilone8@gmail.com", name: "Alberto Milone" },
-    { email: "alvarobordacores@gmail.com", name: "Alvaro Borda" },
-    { email: "marcos.delcura@alumni.esade.edu", name: "Marcos del Cura" },
-    { email: "maximilian.kuehr@gmail.com", name: "Maximilian Kuehr" },
-    { email: "joanbatllorius@gmail.com", name: "Joan Batllo" },
-    { email: "alessandroromeo554@gmail.com", name: "Alessandro Romeo" },
-    { email: "flavia.santi@alumni.esade.edu", name: "Flavia Santi" },
-    { email: "jansalvariba@gmail.com", name: "Jan Salvador" }
-  ],
-  "Advanced Accounting": [
-    // Tutorly email
-    { email: "tutorlynow@gmail.com", name: "Tutorly" },
-
-    { email: "marcpigemstyle8@gmail.com", name: "Marc Piggem" },
-    
-    { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
-    { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
-    { email: "nikosmichail.apostolakis@alumni.esade.edu", name: "Niko Apostolakis" },
-    { email: "Achille.zerbib@gmail.com", name: "Achille Zerbib" },
-    { email: "giorgio.goretti05@gmail.com", name: "Giorgio Goretti" },
-    { email: "giuseppeleonardo.mazza@alumni.esade.edu", name: "Giuseppe Mazza" },
-    { email: "ginevra.fundaro@alumni.esade.edu", name: "Ginevra Fundaro" },
-    { email: "albertomilone8@gmail.com", name: "Alberto Milone" },
-    { email: "alvarobordacores@gmail.com", name: "Alvaro Borda" },
-    { email: "marcos.delcura@alumni.esade.edu", name: "Marcos del Cura" },
-    { email: "maximilian.kuehr@gmail.com", name: "Maximilian Kuehr" },
-    { email: "joanbatllorius@gmail.com", name: "Joan Batllo" },
-    { email: "alessandroromeo554@gmail.com", name: "Alessandro Romeo" },
-    { email: "flavia.santi@alumni.esade.edu", name: "Flavia Santi" }
-  ],
-  "Microeconomics": [
-    // Tutorly email
-    { email: "tutorlynow@gmail.com", name: "Tutorly" },
-
-    { email: "marcpigemstyle8@gmail.com", name: "Marc Piggem" },
-    { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
-    { email: "nourbishouty@gmail.com", name: "Nour Bishouty" },
-    { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
-    { email: "nikosmichail.apostolakis@alumni.esade.edu", name: "Niko Apostolakis" },
-    { email: "federico.martino21@gmail.com", name: "Federico Martino" },
-    { email: "giorgio.goretti05@gmail.com", name: "Giorgio Goretti" },
-    { email: "giuseppeleonardo.mazza@alumni.esade.edu", name: "Giuseppe Mazza" },
-    { email: "Achille.zerbib@gmail.com", name: "Achille Zerbib" },
-    { email: "alejandrohernandeza30@gmail.com", name: "Alejandro Hernandez" },
-    { email: "albertomilone8@gmail.com", name: "Alberto Milone" },
-    { email: "alvarobordacores@gmail.com", name: "Alvaro Borda" },
-    { email: "marcos.delcura@alumni.esade.edu", name: "Marcos del Cura" },
-    { email: "joanbatllorius@gmail.com", name: "Joan Batllo" },
-    { email: "cire3310@gmail.com", name: "Eric Darasteanu" },
-    { email: "josepcubedo2005@gmail.com", name: "Josep Cubedo" }
-  ],
-  "Macroeconomics": [
-    // Tutorly email
-    { email: "tutorlynow@gmail.com", name: "Tutorly" },
-
-    { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
-    { email: "nourbishouty@gmail.com", name: "Nour Bishouty" },
-    { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
-    { email: "nikosmichail.apostolakis@alumni.esade.edu", name: "Niko Apostolakis" },
-    { email: "Achille.zerbib@gmail.com", name: "Achille Zerbib" },
-    { email: "giorgio.goretti05@gmail.com", name: "Giorgio Goretti" },
-    { email: "giuseppeleonardo.mazza@alumni.esade.edu", name: "Giuseppe Mazza" },
-    { email: "ginevra.fundaro@alumni.esade.edu", name: "Ginevra Fundaro" },
-    { email: "alejandrohernandeza30@gmail.com", name: "Alejandro Hernandez" },
-    { email: "albertomilone8@gmail.com", name: "Alberto Milone" },
-    { email: "romanemichaeli@gmail.com", name: "Romane Michaeli" },
-    { email: "alvarobordacores@gmail.com", name: "Alvaro Borda" },
-    { email: "marcos.delcura@alumni.esade.edu", name: "Marcos del Cura" },
-    { email: "joanbatllorius@gmail.com", name: "Joan Batllo" },
-    { email: "martintuancarrasco@gmail.com", name: "Martin Carrasco" },
-    { email: "flavia.santi@alumni.esade.edu", name: "Flavia Santi" },
-    { email: "marco.morchio0505@gmail.com", name: "Marco Morchio" },
-    { email: "simon.bahno@gmail.com", name: "Simon Bahno" }
-  ],
-  "Business Law": [
-    // Tutorly email
-    { email: "tutorlynow@gmail.com", name: "Tutorly" },
-
-    // Testing
-    { email: "temp2@jcnorris.com", name: "Norris" },
-    { email: "benben113el@gmail.com", name: "Beni" },
-
-
-    { email: "marcpigemstyle8@gmail.com", name: "Marc Piggem" },
-    { email: "federico.martino21@gmail.com", name: "Federico Martino" },
-    { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
-    { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
-    { email: "giorgio.goretti05@gmail.com", name: "Giorgio Goretti" },
-    { email: "giuseppeleonardo.mazza@alumni.esade.edu", name: "Giuseppe Mazza" },
-    { email: "Achille.zerbib@gmail.com", name: "Achille Zerbib" },
-    { email: "helena.durban@alumni.esade.edu", name: "Helena Durban" }
-  ],
-  "Tax Law": [
-    // Tutorly email
-    { email: "tutorlynow@gmail.com", name: "Tutorly" },
-    
-    { email: "marcpigemstyle8@gmail.com", name: "Marc Piggem" },
-    { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
-    { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
-    { email: "federico.martino21@gmail.com", name: "Federico Martino" },
-    { email: "giorgio.goretti05@gmail.com", name: "Giorgio Goretti" },
-    { email: "giuseppeleonardo.mazza@alumni.esade.edu", name: "Giuseppe Mazza" },
-    { email: "Achille.zerbib@gmail.com", name: "Achille Zerbib" },
-    { email: "helena.durban@alumni.esade.edu", name: "Helena Durbán" },
-    { email: "simon.bahno@gmail.com", name: "Simon Bahno" }
-  ],
-  "Managing Digital Information": [
-    // Tutorly email
-    { email: "tutorlynow@gmail.com", name: "Tutorly" },
-    
-    { email: "mszeni@yahoo.com", name: "Mark Szeni" },
-    { email: "nikosmichail.apostolakis@alumni.esade.edu", name: "Niko Apostolakis" },
-    { email: "davidmontanepuig@gmail.com", name: "David Montané" },
-    { email: "Marcobertaccini18@gmail.com", name: "Marco Bertaccini" },
-    { email: "cire3310@gmail.com", name: "Eric Darasteanu" },
-    { email: "joanbatllorius@gmail.com", name: "Joan Batllo" },
-    { email: "martintuancarrasco@gmail.com", name: "Martin Carrasco" },
-    { email: "josepcubedo2005@gmail.com", name: "Josep Cubedo" },
-    { email: "jansalvariba@gmail.com", name: "Jan Salvador" },
-    { email: "marco.morchio0505@gmail.com", name: "Marco Morchio" }
-  ],
-  "Managerial Economics": [
-    // Tutorly email
-    { email: "tutorlynow@gmail.com", name: "Tutorly" },
-
-    { email: "Achille.zerbib@gmail.com", name: "Achille Zerbib" },
-    { email: "giorgio.goretti05@gmail.com", name: "Giorgio Goretti" },
-    { email: "federico.martino21@gmail.com", name: "Federico Martino" },
-    { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
-    { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
-    { email: "romanemichaeli@gmail.com", name: "Romane Michaeli" },
-    { email: "marcos.delcura@alumni.esade.edu", name: "Marcos del Cura" },
-    { email: "joanbatllorius@gmail.com", name: "Joan Batllo" },
-    { email: "martintuancarrasco@gmail.com", name: "Martin Carrasco" },
-    { email: "jansalvariba@gmail.com", name: "Jan Salvador" },
-    { email: "marco.morchio0505@gmail.com", name: "Marco Morchio" },
-    { email: "simon.bahno@gmail.com", name: "Simon Bahno" }
-  ],
-  "Financial Analysis": [
-    // Tutorly email
-    { email: "tutorlynow@gmail.com", name: "Tutorly" },
-
-    { email: "Achille.zerbib@gmail.com", name: "Achille Zerbib" },
-    { email: "giorgio.goretti05@gmail.com", name: "Giorgio Goretti" },
-    { email: "vasiljevicvukasin0@gmail.com", name: "Vukasin Vasiljevic" },
-    { email: "antoinemuller44@gmail.com", name: "Antoine Muller" },
-    { email: "marcos.delcura@alumni.esade.edu", name: "Marcos del Cura" },
-    { email: "joanbatllorius@gmail.com", name: "Joan Batllo" },
-    { email: "alessandroromeo554@gmail.com", name: "Alessandro Romeo" },
-    { email: "jansalvariba@gmail.com", name: "Jan Salvador" },
-    { email: "marco.morchio0505@gmail.com", name: "Marco Morchio" },
-    { email: "martintuancarrasco@gmail.com", name: "Martin Carrasco" }
-  ],
-  "Financial Economics": [
-    // Tutorly email
-    { email: "tutorlynow@gmail.com", name: "Tutorly" },
-
-    { email: "alessandroromeo554@gmail.com", name: "Alessandro Romeo" },
-    { email: "flavia.santi@alumni.esade.edu", name: "Flavia Santi" }
-  ],
-  "Spanish": [
-    // Tutorly email
-    { email: "tutorlynow@gmail.com", name: "Tutorly" },
-
-    { email: "martinkohan81@gmail.com", name: "Martin Kohan" },
-
-    // Testing
-    { email: "benben113el@gmail.com", name: "Beni" },
-  ],
-  "English": [
-    // Tutorly email
-    { email: "tutorlynow@gmail.com", name: "Tutorly" },
-    
-    // Testing
-    { email: "elishakov77@gmail.com", name: "Benjjj" },
-    
-    { email: "nourbishouty@gmail.com", name: "Nour Bishouty" },
-    { email: "giorgio.goretti05@gmail.com", name: "Giorgio Goretti" },
-    { email: "albertomilone8@gmail.com", name: "Alberto Milone" }
-  ],
-  "German": [
-    { email: "F.gesinski@gmail.com", name: "Filippa Gesinski" },
-    { email: "antoinemuller44@gmail.com", name: "Antoine Muller" }
-  ]
-};
+// Import university data from central config
+const universitiesData = require('../src/config/universities.js');
 
 /**
- * Get tutors for a specific subject
+ * Get tutors for a specific subject from universities.js config
  * @param {string} subject - The subject name
+ * @param {string} university - The university slug (esade/lycee), defaults to esade
  * @returns {Array} - Array of tutor objects with email and name
  */
-function getTutorsForSubject(subject) {
-  return tutorsBySubject[subject] || [];
+function getTutorsForSubject(subject, university = 'esade') {
+  const universityConfig = universitiesData.default[university];
+  if (universityConfig && universityConfig.tutors && universityConfig.tutors[subject]) {
+    return universityConfig.tutors[subject];
+  }
+  return [];
 }
 
 /**
- * Get tutor emails for a specific subject
+ * Get tutor emails for a specific subject from universities.js config
  * @param {string} subject - The subject name
+ * @param {string} university - The university slug (esade/lycee), defaults to esade
  * @returns {Array} - Array of tutor email addresses
  */
-function getTutorEmailsForSubject(subject) {
-  const tutors = getTutorsForSubject(subject);
+function getTutorEmailsForSubject(subject, university = 'esade') {
+  const tutors = getTutorsForSubject(subject, university);
   return tutors.map(tutor => tutor.email);
 }
+
+// Legacy compatibility - get all tutors from all universities combined
+const tutorsBySubject = {};
+Object.keys(universitiesData.default).forEach(universitySlug => {
+  const universityConfig = universitiesData.default[universitySlug];
+  if (universityConfig.tutors) {
+    Object.keys(universityConfig.tutors).forEach(subject => {
+      if (!tutorsBySubject[subject]) {
+        tutorsBySubject[subject] = [];
+      }
+      tutorsBySubject[subject] = tutorsBySubject[subject].concat(universityConfig.tutors[subject]);
+    });
+  }
+});
 
 module.exports = {
   tutorsBySubject,

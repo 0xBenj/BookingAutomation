@@ -8,7 +8,7 @@
 }
   
 .tutorly-header {
-    background: linear-gradient(135deg, #3f4eb6, #7681d3);
+    background: var(--university-gradient, linear-gradient(135deg, var(--university-primary, #3f4eb6), var(--university-secondary, #7681d3)));
     color: white;
     padding: 2.5rem 2rem;
     text-align: center;
@@ -35,7 +35,7 @@
 /* Form notice styling with icon */
 .form-notice {
     background-color: #f9f9fb;
-    border-left: 4px solid #3f4eb6;
+    border-left: 4px solid var(--university-primary, var(--university-primary, #3f4eb6));
     padding: 1.25rem;
     margin-bottom: 2.5rem;
     color: #4b5563;
@@ -48,7 +48,7 @@
   
 .form-notice svg {
     flex-shrink: 0;
-    color: #3f4eb6;
+    color: var(--university-primary, #3f4eb6);
     margin-top: 0.25rem;
 }
   
@@ -114,7 +114,7 @@
 }
   
 .form-section-title svg {
-    color: #3f4eb6;
+    color: var(--university-primary, #3f4eb6);
     margin-right: 0.9rem;
     flex-shrink: 0;
 }
@@ -197,7 +197,7 @@
 .form-field input:focus,
 .form-field textarea:focus {
     outline: none;
-    border-color: #3f4eb6;
+    border-color: var(--university-primary, #3f4eb6);
     box-shadow: 0 0 0 3px rgba(63, 78, 182, 0.1);
 }
   
@@ -223,7 +223,7 @@
     width: auto;
     margin-right: 0.5rem;
     cursor: pointer;
-    accent-color: #3f4eb6;
+    accent-color: var(--university-primary, #3f4eb6);
 }
   
 /* Button-select styles */
@@ -251,14 +251,14 @@
 }
   
 .button-select:hover {
-    background-color: #f7f8fd;
-    border-color: #c1c6e7;
+    background-color: color-mix(in srgb, var(--university-primary, #3f4eb6) 8%, #ffffff);
+    border-color: color-mix(in srgb, var(--university-primary, #3f4eb6) 30%, #e2e8f0);
 }
   
 .button-select.selected {
-    background-color: #3f4eb6;
+    background-color: var(--university-primary, #3f4eb6);
     color: white;
-    border-color: #3f4eb6;
+    border-color: var(--university-primary, #3f4eb6);
     font-weight: 600;
     box-shadow: 0 2px 5px rgba(63, 78, 182, 0.2);
 }
@@ -270,7 +270,7 @@
   
 .button-primary {
     width: 100%;
-    background-color: #3f4eb6;
+    background-color: var(--university-primary, #3f4eb6);
     color: white;
     font-weight: 600;
     font-size: 1.05rem;
@@ -286,7 +286,7 @@
 }
   
 .button-primary:hover {
-    background-color: #364298;
+    background-color: var(--university-secondary, #364298);
     transform: translateY(-2px);
     box-shadow: 0 6px 14px rgba(63, 78, 182, 0.35);
 }
@@ -380,7 +380,7 @@
 }
   
 .contact-info a {
-    color: #3f4eb6;
+    color: var(--university-primary, #3f4eb6);
     text-decoration: none;
     font-weight: 500;
 }
@@ -412,7 +412,7 @@
   
 .price-display h3 {
     margin-top: 0;
-    color: #3f4eb6;
+    color: var(--university-primary, #3f4eb6);
     font-size: 1.3rem;
     margin-bottom: 1rem;
     font-weight: 600;
@@ -451,7 +451,7 @@
 
 .pricing-summary h3 {
     font-size: 1.4rem;
-    color: #3f4eb6;
+    color: var(--university-primary, #3f4eb6);
     margin-bottom: 1.5rem;
     font-weight: 600;
     display: flex;
@@ -460,7 +460,7 @@
 }
 
 .pricing-summary h3 svg {
-    color: #3f4eb6;
+    color: var(--university-primary, #3f4eb6);
 }
 
 .pricing-summary-details {
@@ -496,7 +496,7 @@
 }
 
 .pricing-total {
-    background-color: #3f4eb6;
+    background-color: var(--university-primary, #3f4eb6);
     color: white;
     padding: 1.25rem;
     border-radius: 8px;
@@ -624,13 +624,14 @@ input::-webkit-calendar-picker-indicator {
 }
 
 .grid-button:hover {
-  background: var(--hover-color);
+  background: color-mix(in srgb, var(--university-primary, #3f4eb6) 8%, #ffffff);
+  border-color: color-mix(in srgb, var(--university-primary, #3f4eb6) 30%, #e2e8f0);
 }
 
 .grid-button.selected {
-  background: var(--primary-color);
+  background: var(--university-primary, #3f4eb6);
   color: white;
-  border-color: var(--primary-color);
+  border-color: var(--university-primary, #3f4eb6);
 }.grid-2x1 {  display: grid;  grid-template-columns: repeat(2, 1fr);  gap: 1rem;  max-width: 400px;}.grid-2x1 .grid-button {  padding: 1.2rem;  font-size: 1rem;}
 
 /* Format selector styling */
@@ -678,9 +679,9 @@ input::-webkit-calendar-picker-indicator {
 }
 
 .format-button.selected {
-  background-color: #3f4eb6;
+  background-color: var(--university-primary, #3f4eb6);
   color: white;
-  border-color: #3f4eb6;
+  border-color: var(--university-primary, #3f4eb6);
   font-weight: 600;
   box-shadow: 0 2px 5px rgba(63, 78, 182, 0.2);
 }
@@ -728,7 +729,7 @@ input::-webkit-calendar-picker-indicator {
 
 .payment-summary h3 {
   font-size: 1.2rem;
-  color: #3f4eb6;
+  color: var(--university-primary, #3f4eb6);
   margin-bottom: 1rem;
   font-weight: 600;
 }
@@ -740,7 +741,7 @@ input::-webkit-calendar-picker-indicator {
 
 .payment-amount strong {
   font-size: 1.3rem;
-  color: #3f4eb6;
+  color: var(--university-primary, #3f4eb6);
 }
 
 .payment-element-container {
@@ -783,7 +784,7 @@ input::-webkit-calendar-picker-indicator {
 }
 
 .button-secondary:hover {
-  background-color: #cbd5e1;
+  background-color: color-mix(in srgb, var(--university-primary, #3f4eb6) 15%, #e2e8f0);
 }
 
 .back-button {
@@ -806,7 +807,7 @@ input::-webkit-calendar-picker-indicator {
 }
 
 .booking-details strong {
-  color: #3f4eb6;
+  color: var(--university-primary, #3f4eb6);
   font-weight: 600;
 }
 
@@ -825,6 +826,6 @@ input::-webkit-calendar-picker-indicator {
 .payment-processing .loading-spinner {
   width: 40px;
   height: 40px;
-  color: #3f4eb6;
+  color: var(--university-primary, #3f4eb6);
   animation: rotate 1s linear infinite;
 }

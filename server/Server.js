@@ -10,6 +10,9 @@ console.log('Stripe key available:', !!process.env.STRIPE_SECRET_KEY);
 console.log('Stripe key length:', process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.length : 0);
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // Add Stripe
 
+// In-memory cache to prevent duplicate session processing
+const processingCache = new Set();
+
 //===================================================================
 // MODULE IMPORTS AND INITIALIZATION
 //===================================================================
@@ -26,7 +29,7 @@ console.log('Imported mailer module exports:', Object.keys(mailerModule));
 
 
 // Log the path to tutors module to verify it's correct
-console.log('Tutors module path:', path.join(__dirname, '../src/data/tutors'));
+console.log('Tutors module path:', path.join(__dirname, './tutors'));
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -56,9 +59,16 @@ function parsePhoneNumber(phone) {
 // Handles incoming booking requests, processes them, and saves to 
 // Google Sheets and Calendar
 //===================================================================
-app.post('/api/bookings', async (req, res) => {
+// Support both legacy and university-specific booking routes
+app.post('/api/bookings', handleBooking);
+app.post('/api/university/:university/bookings', handleBooking);
+
+async function handleBooking(req, res) {
   try {
     console.log('Received booking request:', req.body);
+    
+    // Get university from URL parameter or detect from request
+    const university = req.params.university || req.body.university || 'esade'; // Default to esade for backward compatibility
     
     // Verify the required functions exist
     if (typeof sheetsModule.addBooking !== 'function') {
@@ -71,9 +81,10 @@ app.post('/api/bookings', async (req, res) => {
       throw new Error('createCalendarEvent function is not properly defined');
     }
     
-    // Add timestamp and default status if not provided
+    // Add timestamp, university, and default status if not provided
     const bookingData = {
       ...req.body,
+      university: university,
       timestamp: new Date().toISOString(),
       status: req.body.status || 'Pending'
     };
@@ -112,10 +123,10 @@ app.post('/api/bookings', async (req, res) => {
       bookingData.price = (ratePerPerson * people * hours).toFixed(2);
     }
 
-    // Perform both operations
+    // Perform both operations with university context
     const [sheetResult, calendarResult] = await Promise.all([
-      sheetsModule.addBooking(bookingData),
-      calendarModule.createCalendarEvent(bookingData)
+      sheetsModule.addBooking(bookingData, university),
+      calendarModule.createCalendarEvent(bookingData, university)
     ]);
     
     // Return success response
@@ -139,7 +150,7 @@ app.post('/api/bookings', async (req, res) => {
       }
     });
   }
-});
+}
 
 //===================================================================
 // STRIPE PAYMENT ENDPOINTS
@@ -224,10 +235,13 @@ app.post('/api/payment-success', async (req, res) => {
       status: 'Confirmed'
     };
     
+    // Get university from booking data for university context
+    const university = completeBookingData.university || 'esade';
+    
     // Save to sheets and calendar
     const [sheetResult, calendarResult] = await Promise.all([
-      sheetsModule.addBooking(completeBookingData),
-      calendarModule.createCalendarEvent(completeBookingData)
+      sheetsModule.addBooking(completeBookingData, university),
+      calendarModule.createCalendarEvent(completeBookingData, university)
     ]);
     
     // Send payment confirmation email to the student
@@ -294,8 +308,11 @@ app.post('/api/create-checkout-session', async (req, res) => {
 
     // Get the domain for success and cancel URLs
     const domain = frontendUrl || process.env.FRONTEND_URL || 'https://tutorly-booking.web.app';
+    
+    // Get university from booking data for proper routing
+    const university = bookingData.university || 'esade';
 
-    console.log(`Creating checkout session for ${amount}€, redirecting to ${domain}`);
+    console.log(`Creating checkout session for ${amount}€, redirecting to ${domain}/${university}`);
 
     // Create a Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
@@ -316,11 +333,12 @@ app.post('/api/create-checkout-session', async (req, res) => {
       customer_email: customerEmail,
       metadata: {
         bookingInfo: JSON.stringify(compressedBookingData),
-        bookingSource: 'tutorly-online-form'
+        bookingSource: 'tutorly-online-form',
+        university: university
       },
       mode: 'payment',
-      success_url: `${domain}/booking-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${domain}/booking-form`,
+      success_url: `${domain}/${university}/booking-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${domain}/${university}`,
     });
 
     console.log('Checkout session created successfully:', session.id);
@@ -759,90 +777,126 @@ app.get('/api/verify-session', async (req, res) => {
 
 // Make sure we have the process-checkout-booking endpoint
 app.post('/api/process-checkout-booking', async (req, res) => {
+  const { sessionId, bookingData } = req.body;
+  
+  if (!sessionId) {
+    return res.status(400).json({ success: false, error: 'Session ID is required' });
+  }
+  
+  if (!bookingData) {
+    return res.status(400).json({ success: false, error: 'Booking data is required' });
+  }
+  
+  console.log('Processing booking for session:', sessionId);
+  
+  // Check if this session is already being processed (race condition protection)
+  if (processingCache.has(sessionId)) {
+    console.log('Session is already being processed by another request, skipping');
+    return res.status(200).json({
+      success: true,
+      message: 'Booking is already being processed',
+      alreadyProcessing: true
+    });
+  }
+  
+  // Mark as processing immediately
+  processingCache.add(sessionId);
+  
   try {
-    const { sessionId, bookingData } = req.body;
-    
-    if (!sessionId) {
-      return res.status(400).json({ success: false, error: 'Session ID is required' });
-    }
-    
-    if (!bookingData) {
-      return res.status(400).json({ success: false, error: 'Booking data is required' });
-    }
-    
-    console.log('Processing booking for session:', sessionId);
-    
     // Verify the session exists and was paid
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     
     if (!session) {
+      processingCache.delete(sessionId); // Clean up cache
       return res.status(404).json({ success: false, error: 'Session not found' });
     }
-    
+  
     if (session.payment_status !== 'paid') {
+      processingCache.delete(sessionId); // Clean up cache
       return res.status(400).json({ 
         success: false, 
         error: `Payment not completed. Current status: ${session.payment_status}` 
       });
     }
     
-    // Check if this session has already been processed (prevent duplicates)
-    if (session.metadata?.processed === 'true') {
-      console.log('Session already processed, skipping duplicate processing');
+      // Check if this session has already been processed (prevent duplicates)
+      if (session.metadata?.processed === 'true') {
+        console.log('Session already processed, skipping duplicate processing');
+        processingCache.delete(sessionId); // Clean up cache
+        return res.status(200).json({
+          success: true,
+          message: 'Booking was already processed successfully',
+          alreadyProcessed: true
+        });
+      }
+    
+      // Additional protection - mark as processing immediately
+      await stripe.checkout.sessions.update(sessionId, {
+        metadata: {
+          ...session.metadata,
+          processing: 'true',
+          processingStarted: new Date().toISOString()
+        }
+      });
+    
+      // Create a complete booking data object with payment details
+      const completeBookingData = {
+        ...bookingData,
+        paymentId: session.payment_intent,
+        paymentStatus: 'Paid',
+        status: 'Confirmed',
+        timestamp: new Date().toISOString(),
+      };
+      
+      // Get university from session metadata or booking data
+      const university = session.metadata?.university || completeBookingData.university || 'esade';
+      console.log('Session metadata university:', session.metadata?.university);
+      console.log('Booking data university:', completeBookingData.university);
+      console.log('Final extracted university:', university);
+    
+      // Save to Google Sheets
+      const sheetResult = await sheetsModule.addBooking(completeBookingData, university);
+      console.log('Booking saved to sheet:', sheetResult ? 'Success' : 'Failed');
+      
+      // Create Calendar event
+      const calendarResult = await calendarModule.createCalendarEvent(completeBookingData, university);
+      console.log('Calendar event created:', calendarResult.id || 'Failed');
+      
+      // Send payment confirmation email to the student
+      if (mailerModule && typeof mailerModule.sendPaymentConfirmation === 'function' && completeBookingData.email) {
+        await mailerModule.sendPaymentConfirmation(completeBookingData);
+        console.log('Payment confirmation email sent to:', completeBookingData.email);
+      } else {
+        console.warn('Could not send payment confirmation email - mailer module missing or email not provided');
+      }
+      
+      // Mark the session as processed to prevent duplicates
+      await stripe.checkout.sessions.update(sessionId, {
+        metadata: {
+          ...session.metadata,
+          processed: 'true',
+          processedTimestamp: new Date().toISOString()
+        }
+      });
+    
+      // Clean up cache on success
+      processingCache.delete(sessionId);
+    
       return res.status(200).json({
         success: true,
-        message: 'Booking was already processed successfully',
-        alreadyProcessed: true
+        message: 'Booking processed successfully',
+        data: {
+          sheetId: sheetResult,
+          calendarId: calendarResult.id
+        }
       });
+    
+    } catch (error) {
+      console.error('Error processing booking from success page:', error);
+      // Clean up cache on error
+      processingCache.delete(sessionId);
+      return res.status(500).json({ success: false, error: error.message });
     }
-    
-    // Create a complete booking data object with payment details
-    const completeBookingData = {
-      ...bookingData,
-      paymentId: session.payment_intent,
-      paymentStatus: 'Paid',
-      status: 'Confirmed',
-      timestamp: new Date().toISOString(),
-    };
-    
-    // Save to Google Sheets
-    const sheetResult = await sheetsModule.addBooking(completeBookingData);
-    console.log('Booking saved to sheet:', sheetResult ? 'Success' : 'Failed');
-    
-    // Create Calendar event
-    const calendarResult = await calendarModule.createCalendarEvent(completeBookingData);
-    console.log('Calendar event created:', calendarResult.id || 'Failed');
-    
-    // Send payment confirmation email to the student
-    if (mailerModule && typeof mailerModule.sendPaymentConfirmation === 'function' && completeBookingData.email) {
-      await mailerModule.sendPaymentConfirmation(completeBookingData);
-      console.log('Payment confirmation email sent to:', completeBookingData.email);
-    } else {
-      console.warn('Could not send payment confirmation email - mailer module missing or email not provided');
-    }
-    
-    // Mark the session as processed to prevent duplicates
-    await stripe.checkout.sessions.update(sessionId, {
-      metadata: {
-        ...session.metadata,
-        processed: 'true',
-        processedTimestamp: new Date().toISOString()
-      }
-    });
-    
-    return res.status(200).json({
-      success: true,
-      message: 'Booking processed successfully',
-      data: {
-        sheetId: sheetResult,
-        calendarId: calendarResult.id
-      }
-    });
-    
-  } catch (error) {
-    console.error('Error processing booking from success page:', error);
-    return res.status(500).json({ success: false, error: error.message });
-  }
 });
 
 // Start the calendar monitoring when server loads
