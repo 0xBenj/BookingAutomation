@@ -43,9 +43,9 @@ async function addBooking(bookingData, university = null) {
     const universitySlug = university || bookingData.university || 'esade'; // Default to esade for backward compatibility
     
     // Determine which sheet to use based on university
-    let sheetName = 'Sheet1'; // Always Sheet1 for ESADE
+    let sheetName = 'Esade'; // Always Esade for ESADE
     if (universitySlug === 'lycee') {
-      sheetName = 'Sheet2'; // Always Sheet2 for Lycee bookings
+      sheetName = 'Lycee'; // Always Lycee for Lycee bookings
     }
     
     // Get tutors for the subject to include in the sheet

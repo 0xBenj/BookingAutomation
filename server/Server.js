@@ -20,12 +20,14 @@ const sheetsModule = require('./services/sheets');
 const calendarModule = require('./services/calendar');
 const tutorsModule = require('./tutors');
 const mailerModule = require('./mailer'); // Import the mailer module
+const notificationsModule = require('./services/notifications'); // Import notifications module
 
 // Verify exports are available
 console.log('Imported sheets module exports:', Object.keys(sheetsModule));
 console.log('Imported calendar module exports:', Object.keys(calendarModule));
 console.log('Imported tutors module exports:', Object.keys(tutorsModule));
 console.log('Imported mailer module exports:', Object.keys(mailerModule));
+console.log('Imported notifications module exports:', Object.keys(notificationsModule));
 
 
 // Log the path to tutors module to verify it's correct
@@ -375,6 +377,43 @@ app.get('/api/health', (req, res) => {
       calendarModule: Object.keys(calendarModule)
     }
   });
+});
+
+//===================================================================
+// NOTIFICATION ENDPOINTS
+// Handle reviews, tutor applications, and special packages
+//===================================================================
+app.post('/api/reviews', async (req, res) => {
+  try {
+    console.log('Received review:', req.body);
+    const result = await notificationsModule.handleReview(req.body);
+    res.json(result);
+  } catch (error) {
+    console.error('Review error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/tutor-applications', async (req, res) => {
+  try {
+    console.log('Received tutor application:', req.body);
+    const result = await notificationsModule.handleTutorApplication(req.body);
+    res.json(result);
+  } catch (error) {
+    console.error('Tutor application error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/special-packages', async (req, res) => {
+  try {
+    console.log('Received special package:', req.body);
+    const result = await notificationsModule.handleSpecialPackage(req.body);
+    res.json(result);
+  } catch (error) {
+    console.error('Special package error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 //===================================================================
