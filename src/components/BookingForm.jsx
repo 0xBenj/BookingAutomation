@@ -822,6 +822,10 @@ const BookingForm = () => {
                     ))}
                   </div>
                   {formErrors.classFormat && <div className="error-text">{formErrors.classFormat}</div>}
+                  <div className="field-hint location-clarification">
+                    <InfoIcon />
+                    <span>Class location will be arranged directly with your tutor after booking.</span>
+                  </div>
                 </div>
               </div>
               

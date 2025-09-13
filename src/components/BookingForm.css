@@ -128,7 +128,34 @@
     grid-template-columns: 1fr;
     gap: 1.75rem;
 }
-  
+
+
+.location-clarification {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  background-color: #f8f9ff;
+  border: 1px solid #e1e5f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #5a6c7d;
+  line-height: 1.4;
+}
+
+.location-clarification svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  color: #6b7df2;
+}
+
+.location-clarification span {
+  flex: 1;
+}
+
 @media (min-width: 640px) {
     .form-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -829,3 +856,4 @@ input::-webkit-calendar-picker-indicator {
   color: var(--university-primary, #3f4eb6);
   animation: rotate 1s linear infinite;
 }
+
